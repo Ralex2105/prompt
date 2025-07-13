@@ -1,28 +1,23 @@
 import pandas as pd
-
+import numpy as np
 
 EXPECTED_PHASES = ['current_R', 'current_S', 'current_T']
 
 
 def load_current_data(file_path: str) -> pd.DataFrame:
-    """
-    Загружает данные токов фаз из CSV-файла.
-    Обрабатывает случаи, когда некоторые фазы отсутствуют или содержат пропуски.
+    with open(file_path, 'r', encoding='utf-8') as f:
+        first_line = f.readline().strip().replace(' ', '')
 
-    param: file_path (str): Путь к файлу CSV с фазными токами.
-    returns: pd.DataFrame: DataFrame с колонками доступных фаз.
-    """
+    header_candidate = ','.join([x.lower() for x in EXPECTED_PHASES])
+    if first_line.lower() == header_candidate:
+        df = pd.read_csv(file_path)
+    else:
+        df = pd.read_csv(file_path, header=None)
+        df.columns = EXPECTED_PHASES[:df.shape[1]]
 
-    df = pd.read_csv(file_path)
-
-    available_phases = [phase for phase in EXPECTED_PHASES if phase in df.columns]
-
-    if not available_phases:
-        raise ValueError("В файле нет данных ни по одной из фаз (R, S, T)!")
-
-    df = df[available_phases]
-
-    if df.isnull().values.any():
-        print(f"Обнаружены пропущенные значения в фазах {available_phases}")
+    for phase in EXPECTED_PHASES:
+        if phase not in df.columns:
+            df[phase] = np.nan
+    df = df[EXPECTED_PHASES]
 
     return df
