@@ -1,19 +1,16 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from data_loader import load_current_data
 from preprocessing import dq_transform
 
-def data_visualize(file_path: str, n_points: int = 2000):
+def data_visualize(df: pd.DataFrame, n_points: int = 2000):
     """
     Визуализирует токи трёх фаз из CSV-файла.
     
     Аргументы:
-    - file_path: путь к .csv файлу
-    - n_points: сколько отсчётов отобразить (по умолчанию: 2000)
+    df: датафрейм с данными
+    n_points: сколько отсчётов отобразить (по умолчанию: 2000)
     """
-    # Загрузка данных
-    df = load_current_data(file_path)    
 
     # Извлекаем первые n_points точек
     sample = df.iloc[:n_points]
@@ -46,9 +43,9 @@ def data_visualize(file_path: str, n_points: int = 2000):
     plt.tight_layout()
 
 
-def data_visualize_combined(file_path: str, n_points: int = 2000):
+def data_visualize_combined(df: pd.DataFrame, n_points: int = 2000):
 
-    df = load_current_data(file_path).mean(axis=1)    
+    df = df.mean(axis=1)
     sample = df.iloc[:n_points]
 
     plt.figure(figsize=(14, 5))
@@ -70,15 +67,14 @@ def data_visualize_combined(file_path: str, n_points: int = 2000):
     plt.tight_layout()
     
 
-def data_visualize_dq(file_path: str, n_points: int = 2000):
+def data_visualize_dq(df: pd.DataFrame, n_points: int = 2000):
     """
     Визуализирует токи в dq системе.
     
     Аргументы:
-    file_path: путь к файлу с данными
+    df: датафрейм с данными
     n_points: количество отсчётов для отображения
     """
-    df = load_current_data(file_path)
     sample = df.iloc[:n_points]
     sample = dq_transform(sample)
     
