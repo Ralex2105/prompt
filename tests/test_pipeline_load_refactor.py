@@ -3,8 +3,8 @@ import unittest
 import pandas as pd
 from src.pipeline_load_refactor import process_and_save_one_file
 
-RAW_DATA_DIR = "../tests/test_data"
-PROCESSED_DATA_DIR = "../tests/processed_data"
+RAW_DATA_DIR = "../prompt/data"
+PROCESSED_DATA_DIR = "../prompt/processed_data"
 FILE_AMOUNT = 36  # 35 + 1
 
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
