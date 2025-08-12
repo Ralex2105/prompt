@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from preprocessing import dq_transform
+from src.load_preprocessing.preprocessing import dq_transform
 
 def data_visualize(df: pd.DataFrame, n_points: int = 2000):
     """
