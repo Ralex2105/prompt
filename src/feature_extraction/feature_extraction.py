@@ -68,7 +68,7 @@ def extract_features_from_file(
             rows.append({
                 **{f"f{i+1}": float(v[i]) for i in range(len(v))},
                 "defect": defect,
-                "severity": "Low",  #Исправить потом
+                "severity": "None",  #Исправить потом
                 "K_value": float(kmax),
                 "fault_code": fault_code,
             })
@@ -87,5 +87,7 @@ def extract_features_from_file(
         # если подшипников вообще нет — severity оставим
         pass
 
+    df.drop(columns=["K_value", "fault_code"], inplace=True)
+    df.to_csv(out_path, index=False)
     df.to_csv(out_path, index=False)
     return out_path

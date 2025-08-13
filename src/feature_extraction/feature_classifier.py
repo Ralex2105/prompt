@@ -113,19 +113,6 @@ def envelope_spectrum_2_3k(sig, fs=DEFAULT_FS, band=(2000.0, 3000.0)):
         Y[0] = 0.0
     return F, Y
 
-def _local_noise(freqs, spec, f0, window_hz=20.0, gap_hz=2.0):
-    mask = (freqs >= f0-window_hz) & (freqs <= f0+window_hz)
-    if not np.any(mask):
-        return np.median(spec)
-    gap  = (freqs > f0-gap_hz) & (freqs < f0+gap_hz)
-    vals = spec[mask & ~gap]
-    return float(np.median(vals)) if vals.size else float(np.median(spec))
-
-def _band_amp(raw_freqs, raw_mag, f0, tol=0.02):
-    bw = max(f0*tol, 1.0)
-    m = (raw_freqs >= f0-bw) & (raw_freqs <= f0+bw)
-    return float(np.max(raw_mag[m])) if np.any(m) else 0.0
-
 def _safe_stats(region):
     r = np.asarray(region, float)
     if r.size == 0: r = np.array([0.0])
