@@ -4,8 +4,7 @@ from scipy.signal import butter, filtfilt, hilbert, find_peaks
 from scipy.signal.windows import hann
 from scipy.stats import skew, kurtosis, entropy
 
-# ---------- Константы ----------
-DEFAULT_FS = 25600.0      # fs = 25.6 кГц (по документу)
+DEFAULT_FS = 25600.0      # fs = 25.6 кГц
 DEFAULT_RPM = 1770.0      # ~29.5 Гц
 EPS = 1e-12
 
@@ -50,7 +49,7 @@ def _family_K(freqs, spec, f0, fr, w_main=1.0, w_h2=0.6, w_h3=0.3, w_sb=0.5, tol
     return Kf, {"a0":a0, "a2":a2, "a3":a3, "as1":as1, "as2":as2, "noise":noise, "psnr":primary_snr}
 
 def _family_K_ftf(freqs, spec, f0, fr):
-    # FTF слабее и ниже по частоте
+    # FTF слабее
     return _family_K(freqs, spec, f0, fr, w_main=1.0, w_h2=0.4, w_h3=0.2, w_sb=0.8, tol_main=0.03)
 
 def _best_rpm_by_family(EF, EY, defect_freqs_by_geometry, rpm_guess, span=0.2):
@@ -76,7 +75,6 @@ def load_bearing_params(path="bearing_config.json"):
 
 bearing_params = load_bearing_params()
 
-# ---------- Формулы частот дефектов ----------
 def defect_freqs_by_geometry(rpm: float) -> dict:
     fr = rpm / 60.0  # частота вращения вала
     z  = bearing_params["NUM_BALLS"]
@@ -258,10 +256,6 @@ def analyze_signal(current_R, current_S, current_T, fs=DEFAULT_FS, rpm=DEFAULT_R
     }
 
 
-# ---- в analyze_signal: ничего не меняем, просто убеждаемся, что эти ключи возвращаются ----
-#  "A50_mean", "A100_mean", "A150_mean", "A50_SNR", "coh50", "main_amp"
-# (если у тебя прежняя версия без них — возьми мой вариант analyze_signal из прошлого сообщения)
-
 def classify_defect(current_R, current_S, current_T, fs=DEFAULT_FS, rpm=DEFAULT_RPM):
     a = analyze_signal(current_R, current_S, current_T, fs, rpm)
 
@@ -317,7 +311,7 @@ def classify_defect_scored(current_R, current_S, current_T, fs=DEFAULT_FS, rpm=D
     EF, EY = a["EF"], a["EY"]
     fr     = a["fr"];  fdef = a["fdef"]
 
-    # семейства: BPFI/BPFO/BSF обычные, FTF другой
+    # BPFI/BPFO/BSF обычные, FTF другой
     Kmap, Pmap = {}, {}
     for key in ["BPFI","BPFO","BSF"]:
         Kmap[key], Pmap[key] = _family_K(EF, EY, fdef[key], fr)
