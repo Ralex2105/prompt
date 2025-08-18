@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from src.feature_extraction.feature_classifier import (
+from feature_extraction.feature_classifier import (
     get_feature_vector,
     classify_defect_scored,
     severity_from_K,
@@ -33,7 +33,7 @@ def extract_features_from_file(
     out_dir: str,
     window_size: int = int(DEFAULT_FS),
     step: int = int(DEFAULT_FS // 2),
-    rows_per_chunk: int | None = None
+    rows_per_chunk: int | None = None,
 ) -> str:
     if rows_per_chunk is None:
         rows_per_chunk = window_size * 4
@@ -88,6 +88,5 @@ def extract_features_from_file(
         pass
 
     df.drop(columns=["K_value", "fault_code"], inplace=True)
-    df.to_csv(out_path, index=False)
     df.to_csv(out_path, index=False)
     return out_path

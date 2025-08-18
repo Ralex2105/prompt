@@ -1,7 +1,11 @@
-from data_loader import load_current_data
-from preprocessing import preprocess_data
+from load_preprocessing.data_loader import load_current_data
+from load_preprocessing.preprocessing import preprocess_data
 import os
 
+def csv_sort(data_dir: str):
+    csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
+    csv_files.sort(key=lambda x: int(x.split('_')[1].split('.')[0]))
+    return csv_files
 
 def process_and_save_one_file(input_file: str, output_file: str) -> bool:
 
@@ -29,8 +33,7 @@ def process_and_save_all_files(data_dir: str):
         failed_files = []
         
         # Получаем список CSV файлов и сортируем их по числовому значению
-        csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
-        csv_files.sort(key=lambda x: int(x.split('_')[1].split('.')[0]))
+        csv_files = csv_sort(data_dir)
         
         # Создаем отдельную директорию для обработанных файлов
         processed_dir = os.path.join(os.path.dirname(data_dir), 'processed_files')
