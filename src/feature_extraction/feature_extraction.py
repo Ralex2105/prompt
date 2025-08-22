@@ -1,11 +1,9 @@
+# feature_extraction.py
 # -*- coding: utf-8 -*-
 """
-Backwards-compatible feature extraction:
-- Сохраняет имена функций/выходные столбцы прежними (f1..f26, defect, severity, K_value, fault_code).
-- Внутри: допускает окна с 1–2 фазами (дорисовка недостающих каналов),
-  устойчивое чтение CSV чанками, адаптивная калибровка severity только для подшипников.
+Backwards-compatible feature extraction (минорные косметические правки).
+API сохранён: extract_features_from_file(csv_path, output_path=None, fs=DEFAULT_FS, rpm_guess=DEFAULT_RPM)
 """
-
 from __future__ import annotations
 import os
 import math
@@ -14,7 +12,6 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-# Fallback import path — чтобы файл работал и как модуль, и как скрипт
 try:
     from src.feature_extraction.feature_classifier import (
         DEFAULT_FS, DEFAULT_RPM, get_feature_vector, classify_defect_scored, severity_from_K
@@ -24,18 +21,13 @@ except ImportError:
         DEFAULT_FS, DEFAULT_RPM, get_feature_vector, classify_defect_scored, severity_from_K
     )
 
-# === Параметры обработки (поведение по умолчанию прежнее) ===
-WINDOW_SEC = 1.0                 # окно ≈1 с
-STEP_SEC = 0.5                   # шаг ≈0.5 с
-MIN_VALID_RATIO = 0.80           # минимум валидных (не-NaN) точек в окне на фазу
-CHUNK_SECONDS = 10.0             # читать CSV кусками по 10 секунд
-
+WINDOW_SEC = 1.0
+STEP_SEC = 0.5
+MIN_VALID_RATIO = 0.80
+CHUNK_SECONDS = 10.0
 BEARING_DEFECTS = {"Inner Race", "Outer Race", "Ball", "Cage"}
 
-# === Утилиты ===
 def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    cols = {c.lower().strip(): c for c in df.columns}
-    # допустимые варианты имён
     mapping = {}
     for c in df.columns:
         lc = c.lower().strip()
@@ -53,7 +45,6 @@ def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out[['Current_R', 'Current_S', 'Current_T']]
 
 def _clean_window(arr: np.ndarray) -> Tuple[np.ndarray, bool]:
-    """Заменяет NaN на медиану окна, возвращает (массив, окно_валидно_по_доле)."""
     x = arr.astype(float, copy=False)
     valid_mask = np.isfinite(x)
     ratio = float(np.mean(valid_mask))
@@ -63,26 +54,18 @@ def _clean_window(arr: np.ndarray) -> Tuple[np.ndarray, bool]:
     x = np.where(np.isfinite(x), x, med)
     return x, (ratio >= MIN_VALID_RATIO)
 
-# === Публичная ф-ция (имя/выход прежние) ===
-
 def extract_features_from_file(csv_path: str,
                                output_path: Optional[str] = None,
                                fs: float = DEFAULT_FS,
                                rpm_guess: float = DEFAULT_RPM) -> str:
-    """
-    Читает csv_path, проходит окнами и пишет *_features.csv (или output_path).
-    Возвращает путь к сохранённому CSV. Формат столбцов как прежде.
-    """
     if output_path is None:
         base, ext = os.path.splitext(csv_path)
         output_path = f"{base}_features.csv"
 
-    # если передана папка — складываем в неё <input>_features.csv
     if os.path.isdir(output_path):
         base_in = os.path.splitext(os.path.basename(csv_path))[0]
         output_path = os.path.join(output_path, f"{base_in}_features.csv")
 
-    # гарантируем существование директории назначения
     out_dir = os.path.dirname(os.path.abspath(output_path))
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
@@ -102,20 +85,17 @@ def extract_features_from_file(csv_path: str,
     reader = pd.read_csv(csv_path, chunksize=chunk)
     for df in reader:
         sig = _normalize_columns(df).to_numpy(dtype=float)
-        # склеиваем хвост для перекрытия
         if tail.size:
             sig = np.vstack([tail, sig])
 
         n = sig.shape[0]
         if n < window:
-            tail = sig  # целиком в хвост, ждём следующий чанк
+            tail = sig
             continue
 
-        # бегущие окна
         start = 0
         while start + window <= n:
-            seg = sig[start:start+window, :]  # (N,3)
-            # очистка/валидация по каналам
+            seg = sig[start:start+window, :]
             ok_flags = []
             channels = []
             for ch in range(3):
@@ -128,13 +108,10 @@ def extract_features_from_file(csv_path: str,
                 start += step
                 continue
 
-            # заполняем недостающие каналы: при 1 фазе дублируем её, при 2 — берём среднее двух
             if n_valid == 1:
                 idx = ok_flags.index(True)
                 base = channels[idx]
-                R = base
-                S = base
-                T = base
+                R = base; S = base; T = base
             elif n_valid == 2:
                 vals = [channels[i] for i, ok in enumerate(ok_flags) if ok]
                 fill = (vals[0] + vals[1]) * 0.5
@@ -154,14 +131,11 @@ def extract_features_from_file(csv_path: str,
             Kvals.append(float(K))
             codes.append(code)
 
-            # шаг окна
             start += step
 
-        # оставляем перекрывающий хвост
         last_start = max(0, n - window + step)
         tail = sig[last_start:, :]
 
-    # если ничего не набрали — создаём пустой CSV с заголовком прежнего формата
     cols = [f"f{i}" for i in range(1, 27)] + ["defect", "severity", "K_value", "fault_code"]
     if not feats:
         pd.DataFrame(columns=cols).to_csv(output_path, index=False)
@@ -173,20 +147,19 @@ def extract_features_from_file(csv_path: str,
     out["K_value"] = Kvals
     out["fault_code"] = codes
 
-    # адаптивная перекалибровка severity только для подшипников — интерфейс/значения меток те же
+    # адаптивная перекалибровка только для подшипников (как было)
+    BEARING_DEFECTS = {"Inner Race", "Outer Race", "Ball", "Cage"}
     is_bearing = out["defect"].isin(BEARING_DEFECTS)
     if is_bearing.any():
         Kb = out.loc[is_bearing, "K_value"].to_numpy()
-        if Kb.size >= 10:  # чтобы квантиль был осмысленным
+        if Kb.size >= 10:
             q70 = float(np.quantile(Kb, 0.70))
             q90 = float(np.quantile(Kb, 0.90))
-            thr_med = max(3.0, q70)  # минимум «Medium» не ниже 3
-            thr_high = max(4.0, q90) # минимум «High» не ниже 4
+            thr_med = max(3.0, q70)
+            thr_high = max(4.0, q90)
             def map_sev(k):
-                if k >= thr_high:
-                    return "High"
-                if k >= thr_med:
-                    return "Medium"
+                if k >= thr_high: return "High"
+                if k >= thr_med:  return "Medium"
                 return "Low"
             out.loc[is_bearing, "severity"] = [map_sev(k) for k in out.loc[is_bearing, "K_value"]]
 
