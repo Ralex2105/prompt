@@ -2,5 +2,10 @@
   "NUM_BALLS": 9,
   "BALL_DIAMETER": 0.0079,
   "PITCH_DIAMETER": 0.0385,
-  "CONTACT_ANGLE": 0.0
+  "CONTACT_ANGLE": 0.0,
+
+  "BPFI": 5.43,
+  "BPFO": 4.57,
+  "BSF": 1.96,
+  "FTF": 0.38
 }

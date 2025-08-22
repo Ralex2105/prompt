@@ -1,49 +1,45 @@
 import os
+from pathlib import Path
 
-from src.load_preprocessing.data_visualiser import data_visualize, data_visualize_combined, data_visualize_dq
-
+from src.load_preprocessing.data_visualiser import (
+    data_visualize, data_visualize_combined, data_visualize_dq
+)
 from src.feature_extraction.feature_extraction import extract_features_from_file
+# from src.load_preprocessing.preprocessing import process_and_save_one_file  # если нужно предобрабатывать
 
-#Построение графиков
-# process_and_save_one_file("Data_Set_main/current_1.csv", "src/processed_current_1.csv")
-# data_visualize("Data_Set_main/current_1.csv")
-# data_visualize("src/processed_current_1.csv")
-# data_visualize_combined("src/processed_current_1.csv")
-#data_visualize_dq("src/processed_current_1.csv")
-#plt.show()
+# Директории
+RAW_DATA_DIR = Path("../data")
+PROCESSED_DATA_DIR = Path("../processed_data")
+FEATURE_DATA_DIR = Path("../feature_data")
+FILE_AMOUNT = 36  # processed_1.csv ... processed_35.csv
 
-
-
-
-
-#Создать директорию prompt/data и наполнить её csv
-#Создать директорию prompt/feature_data
-#Создать директорию prompt/processed_data
-
-RAW_DATA_DIR = "../data"
-PROCESSED_DATA_DIR = "../processed_data"
-FEATURE_DATA_DIR = "../feature_data"
-FILE_AMOUNT = 36  # 35 + 1
-
+# Создадим папки на всякий случай (на будущее — если раскомментируешь предобработку/визуализацию)
+PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+FEATURE_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 """
-#Раскомментить, если нужно выполнить предобработку
-
+# Предобработка (раскомментируй при необходимости)
 for file_number in range(1, FILE_AMOUNT):
-    input_file = os.path.join(RAW_DATA_DIR, f"current_{file_number}.csv")
-    output_file = os.path.join(PROCESSED_DATA_DIR, f"processed_{file_number}.csv")
-    process_and_save_one_file(input_file, output_file)
+    input_file = RAW_DATA_DIR / f"current_{file_number}.csv"
+    output_file = PROCESSED_DATA_DIR / f"processed_{file_number}.csv"
+    process_and_save_one_file(str(input_file), str(output_file))
 """
 
-#Вызов выделения признаков
+# Выделение признаков
+FS = 51200   # частота дискретизации
+RPM = 1770   # оценка оборотов (а не Fs!)
 
 for file_number in range(1, FILE_AMOUNT):
-    output_file = os.path.join(FEATURE_DATA_DIR)
-    input_file = os.path.join(PROCESSED_DATA_DIR, f"processed_{file_number}.csv")
-    extract_features_from_file(input_file, output_file, 51200, 25600)
+    input_file = PROCESSED_DATA_DIR / f"processed_{file_number}.csv"
+    # Кладём результат как <processed_N>_features.csv внутри FEATURE_DATA_DIR
+    output_file = FEATURE_DATA_DIR / f"processed_{file_number}_features.csv"
 
+    if not input_file.exists():
+        print(f"[skip] Нет файла: {input_file}")
+        continue
 
-
-
-
-
+    try:
+        saved = extract_features_from_file(str(input_file), str(output_file), FS, RPM)
+        print(f"[ok] {saved}")
+    except Exception as e:
+        print(f"[error] {input_file}: {e}")
