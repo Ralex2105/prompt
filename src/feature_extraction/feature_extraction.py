@@ -163,5 +163,6 @@ def extract_features_from_file(csv_path: str,
                 return "Low"
             out.loc[is_bearing, "severity"] = [map_sev(k) for k in out.loc[is_bearing, "K_value"]]
 
+    out.drop(columns=["K_value", "fault_code"], inplace=True)
     out.to_csv(output_path, index=False)
     return output_path
