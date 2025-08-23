@@ -1,3 +1,4 @@
+
 import os
 
 from src.load_preprocessing.data_visualiser import data_visualize, data_visualize_combined, data_visualize_dq
@@ -41,9 +42,3 @@ for file_number in range(1, FILE_AMOUNT):
     output_file = os.path.join(FEATURE_DATA_DIR)
     input_file = os.path.join(PROCESSED_DATA_DIR, f"processed_{file_number}.csv")
     extract_features_from_file(input_file, output_file, 51200, 25600)
-
-
-
-
-
-

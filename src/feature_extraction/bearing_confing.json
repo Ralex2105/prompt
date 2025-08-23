@@ -1,6 +1,6 @@
 {
-  "NUM_BALLS": 9,
-  "BALL_DIAMETER": 0.0079,
-  "PITCH_DIAMETER": 0.0385,
-  "CONTACT_ANGLE": 0.0
+  "N": 8,
+  "D": 38.5,
+  "D_BALL": 7.938,
+  "THETA_DEG": 0
 }

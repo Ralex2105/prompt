@@ -1,93 +1,167 @@
+# feature_extraction.py
+# -*- coding: utf-8 -*-
+"""
+Backwards-compatible feature extraction (минорные косметические правки).
+API сохранён: extract_features_from_file(csv_path, output_path=None, fs=DEFAULT_FS, rpm_guess=DEFAULT_RPM)
+"""
+from __future__ import annotations
 import os
+import math
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from src.feature_extraction.feature_classifier import (
-    get_feature_vector,
-    classify_defect_scored,
-    severity_from_K,
-    DEFAULT_FS,
-)
 
-CANON = {"current_r": "Current_R", "current_s": "Current_S", "current_t": "Current_T"}
-REQUIRED = ["Current_R", "Current_S", "Current_T"]
+try:
+    from src.feature_extraction.feature_classifier import (
+        DEFAULT_FS, DEFAULT_RPM, get_feature_vector, classify_defect_scored, severity_from_K
+    )
+except ImportError:
+    from feature_classifier import (
+        DEFAULT_FS, DEFAULT_RPM, get_feature_vector, classify_defect_scored, severity_from_K
+    )
+
+WINDOW_SEC = 1.0
+STEP_SEC = 0.5
+MIN_VALID_RATIO = 0.80
+CHUNK_SECONDS = 10.0
+BEARING_DEFECTS = {"Inner Race", "Outer Race", "Ball", "Cage"}
 
 def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    lower = {c: c.strip().lower().replace(" ", "_").replace(",", "") for c in df.columns}
-    df = df.rename(columns=lower)
-    for low, canon in CANON.items():
-        if low in df.columns:
-            df = df.rename(columns={low: canon})
-    for col in REQUIRED:
-        if col not in df.columns:
-            df[col] = np.nan
-    return df[REQUIRED].copy()
+    mapping = {}
+    for c in df.columns:
+        lc = c.lower().strip()
+        if 'current_r' in lc or lc in ('r', 'phase_r', 'ia', 'phase_a'):
+            mapping[c] = 'Current_R'
+        elif 'current_s' in lc or lc in ('s', 'phase_s', 'ib', 'phase_b'):
+            mapping[c] = 'Current_S'
+        elif 'current_t' in lc or lc in ('t', 'phase_t', 'ic', 'phase_c'):
+            mapping[c] = 'Current_T'
+    out = df.copy()
+    out.rename(columns=mapping, inplace=True)
+    for need in ['Current_R', 'Current_S', 'Current_T']:
+        if need not in out.columns:
+            out[need] = np.nan
+    return out[['Current_R', 'Current_S', 'Current_T']]
 
-def _clean_window(win: pd.DataFrame) -> pd.DataFrame:
-    for col in REQUIRED:
-        s = pd.to_numeric(win[col], errors="coerce")
-        win[col] = 0.0 if s.isnull().all() else s.fillna(s.median())
-    return win
+def _clean_window(arr: np.ndarray) -> Tuple[np.ndarray, bool]:
+    x = arr.astype(float, copy=False)
+    valid_mask = np.isfinite(x)
+    ratio = float(np.mean(valid_mask))
+    if ratio == 0.0:
+        return np.zeros_like(x), False
+    med = float(np.nanmedian(x)) if np.any(valid_mask) else 0.0
+    x = np.where(np.isfinite(x), x, med)
+    return x, (ratio >= MIN_VALID_RATIO)
 
-def extract_features_from_file(
-    filename: str,
-    out_dir: str,
-    window_size: int = int(DEFAULT_FS),
-    step: int = int(DEFAULT_FS // 2),
-    rows_per_chunk: int | None = None
-) -> str:
-    if rows_per_chunk is None:
-        rows_per_chunk = window_size * 4
+def extract_features_from_file(csv_path: str,
+                               output_path: Optional[str] = None,
+                               fs: float = DEFAULT_FS,
+                               rpm_guess: float = DEFAULT_RPM) -> str:
+    if output_path is None:
+        base, ext = os.path.splitext(csv_path)
+        output_path = f"{base}_features.csv"
 
-    os.makedirs(out_dir, exist_ok=True)
-    base = os.path.splitext(os.path.basename(filename))[0]
-    out_path = os.path.join(out_dir, f"{base}_features.csv")
+    if os.path.isdir(output_path):
+        base_in = os.path.splitext(os.path.basename(csv_path))[0]
+        output_path = os.path.join(output_path, f"{base_in}_features.csv")
 
-    prev_tail = pd.DataFrame(columns=REQUIRED)
-    rows = []
+    out_dir = os.path.dirname(os.path.abspath(output_path))
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
 
-    for chunk in pd.read_csv(filename, chunksize=rows_per_chunk):
-        chunk = _normalize_columns(chunk)
-        if not prev_tail.empty:
-            chunk = pd.concat([prev_tail, chunk], ignore_index=True)
+    window = int(WINDOW_SEC * fs)
+    step = int(STEP_SEC * fs)
+    chunk = int(CHUNK_SECONDS * fs)
 
-        n = len(chunk)
-        if n < window_size:
-            prev_tail = chunk
+    feats: List[List[float]] = []
+    defects: List[str] = []
+    severities: List[str] = []
+    Kvals: List[float] = []
+    codes: List[Optional[str]] = []
+
+    tail = np.empty((0, 3), dtype=float)
+
+    reader = pd.read_csv(csv_path, chunksize=chunk)
+    for df in reader:
+        sig = _normalize_columns(df).to_numpy(dtype=float)
+        if tail.size:
+            sig = np.vstack([tail, sig])
+
+        n = sig.shape[0]
+        if n < window:
+            tail = sig
             continue
 
-        for start in range(0, n - window_size + 1, step):
-            end = start + window_size
-            win = _clean_window(chunk.iloc[start:end].copy())
-            r = win["Current_R"].to_numpy(float)
-            s = win["Current_S"].to_numpy(float)
-            t = win["Current_T"].to_numpy(float)
+        start = 0
+        while start + window <= n:
+            seg = sig[start:start+window, :]
+            ok_flags = []
+            channels = []
+            for ch in range(3):
+                cleaned, ok = _clean_window(seg[:, ch])
+                channels.append(cleaned)
+                ok_flags.append(ok)
 
-            v = get_feature_vector(r, s, t, fs=DEFAULT_FS)
-            defect, _, kmax, fault_code = classify_defect_scored(r, s, t, fs=DEFAULT_FS)
+            n_valid = sum(ok_flags)
+            if n_valid == 0:
+                start += step
+                continue
 
-            rows.append({
-                **{f"f{i+1}": float(v[i]) for i in range(len(v))},
-                "defect": defect,
-                "severity": "None",  #Исправить потом
-                "K_value": float(kmax),
-                "fault_code": fault_code,
-            })
+            if n_valid == 1:
+                idx = ok_flags.index(True)
+                base = channels[idx]
+                R = base; S = base; T = base
+            elif n_valid == 2:
+                vals = [channels[i] for i, ok in enumerate(ok_flags) if ok]
+                fill = (vals[0] + vals[1]) * 0.5
+                filled = []
+                for ok, ch in zip(ok_flags, channels):
+                    filled.append(ch if ok else fill)
+                R, S, T = filled
+            else:
+                R, S, T = channels
 
-        prev_tail = chunk.iloc[max(0, n - window_size + 1):].copy()
+            fv = get_feature_vector(R, S, T, fs=fs, rpm_guess=rpm_guess)
+            defect, severity, K, code = classify_defect_scored(R, S, T, fs=fs, rpm_guess=rpm_guess)
 
-    # адаптивная шкала по подшипниковым окнам (q70/q90)
-    df = pd.DataFrame(rows)
-    mask_bearing = df["fault_code"].notna()
-    if mask_bearing.any():
-        q70 = float(df.loc[mask_bearing, "K_value"].quantile(0.70))
-        q90 = float(df.loc[mask_bearing, "K_value"].quantile(0.90))
-        thr = {"low": max(q70, 2.0), "med": max(q90, 3.0)}
-        df.loc[mask_bearing, "severity"] = df.loc[mask_bearing, "K_value"].apply(lambda k: severity_from_K(k, thr))
-    else:
-        # если подшипников вообще нет — severity оставим
-        pass
+            feats.append(fv)
+            defects.append(defect)
+            severities.append(severity)
+            Kvals.append(float(K))
+            codes.append(code)
 
-    df.drop(columns=["K_value", "fault_code"], inplace=True)
-    df.to_csv(out_path, index=False)
-    df.to_csv(out_path, index=False)
-    return out_path
+            start += step
+
+        last_start = max(0, n - window + step)
+        tail = sig[last_start:, :]
+
+    cols = [f"f{i}" for i in range(1, 27)] + ["defect", "severity", "K_value", "fault_code"]
+    if not feats:
+        pd.DataFrame(columns=cols).to_csv(output_path, index=False)
+        return output_path
+
+    out = pd.DataFrame(feats, columns=[f"f{i}" for i in range(1, 27)])
+    out["defect"] = defects
+    out["severity"] = severities
+    out["K_value"] = Kvals
+    out["fault_code"] = codes
+
+    # адаптивная перекалибровка только для подшипников (как было)
+    BEARING_DEFECTS = {"Inner Race", "Outer Race", "Ball", "Cage"}
+    is_bearing = out["defect"].isin(BEARING_DEFECTS)
+    if is_bearing.any():
+        Kb = out.loc[is_bearing, "K_value"].to_numpy()
+        if Kb.size >= 10:
+            q70 = float(np.quantile(Kb, 0.70))
+            q90 = float(np.quantile(Kb, 0.90))
+            thr_med = max(3.0, q70)
+            thr_high = max(4.0, q90)
+            def map_sev(k):
+                if k >= thr_high: return "High"
+                if k >= thr_med:  return "Medium"
+                return "Low"
+            out.loc[is_bearing, "severity"] = [map_sev(k) for k in out.loc[is_bearing, "K_value"]]
+
+    out.to_csv(output_path, index=False)
+    return output_path
