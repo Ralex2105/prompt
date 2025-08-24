@@ -14,10 +14,10 @@ from src.load_preprocessing.data_visualiser import data_visualize, data_visualiz
 # plt.show()
 
 # Directory paths
-RAW_DATA_DIR = "../data"
-PROCESSED_DATA_DIR = "../data_processed"
-FEATURE_DATA_DIR = "../data_feature"
-SUMMARY_DATA_DIR = "../data_summary"
+RAW_DATA_DIR = "../data/data"
+PROCESSED_DATA_DIR = "../data/data_processed"
+FEATURE_DATA_DIR = "../data/data_feature"
+SUMMARY_DATA_DIR = "../data/data_summary"
 FILE_AMOUNT = 2
 
 # Create directories if they don't exist
