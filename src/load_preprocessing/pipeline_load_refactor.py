@@ -1,5 +1,5 @@
-from data_loader import load_current_data
-from preprocessing import preprocess_data
+from src.load_preprocessing.preprocessing import preprocess_data
+from src.load_preprocessing.data_loader import load_current_data
 import os
 
 
