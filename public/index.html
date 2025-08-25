@@ -2,51 +2,49 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ССПТД</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
-    <header class="header">
+    <div class="header">
         <div class="header-left">
             <h1>ССПТД</h1>
             <div class="sub">система снятия показателей токовой диагностики</div>
         </div>
-        <div class="status status-idle" id="statusDiv">Статус: Ожидание</div>
-    </header>
+    </div>
 
     <div class="container">
-        <section class="controls-section">
+        <div class="controls-section">
             <div class="card">
                 <div class="controls">
-                    <button class="btn" id="apiConnectBtn">🔌 Подключить API</button>
-                    <div class="time-range-controls">
-                        <label>Интервал:</label>
-                        <select id="sampleInterval">
-                            <option value="auto">Авто-время</option>
-                        </select>
-                    </div>
-                    <div class="time-range-controls">
-                        <label>С:</label>
-                        <input type="datetime-local" id="fromDate">
-                        <label>До:</label>
-                        <input type="datetime-local" id="toDate">
-                        <button class="btn" id="applyTimeRangeBtn">СТАРТ</button>
-                    </div>
+                    <button id="apiConnectBtn" class="btn">🔌 Подключить API</button>
+                    <label>Интервал:</label>
+                    <select id="sampleInterval">
+                        <option>Авто-время</option>
+                    </select>
+                    <label>С:</label>
+                    <input type="date" id="fromDate">
+                    <label>До:</label>
+                    <input type="date" id="toDate">
+                    <button id="startBtn" class="btn">СТАРТ</button>
                 </div>
-                <div class="controls upload-controls">
+
+                <div class="upload-controls">
                     <div class="upload-block">
-                        <input type="file" id="fileInput" multiple accept=".csv" class="hidden">
-                        <button class="btn" id="selectFilesBtn">📁 Выбрать файлы</button>
-                        <button class="btn" id="refreshSummaryBtn">🔄 Обновить</button>
-                        <div class="start-wrapper">
-                            <div class="spinner hidden" id="spinner"></div>
-                            <span id="progressText"></span>
-                        </div>
+                        <input type="file" id="fileInput" multiple hidden>
+                        <button id="selectFilesBtn" class="btn">📁 Выбрать файлы</button>
+                        <button id="refreshFilesBtn" class="btn">🔄 Обновить</button>
                     </div>
                 </div>
+
+                <div id="diagnostics"></div>
+                <div id="processingMessage" class="diagnostic-item info" style="display: none;"></div>
+
+                <div class="start-wrapper">
+                    <div id="spinner" class="spinner hidden"></div>
+                    <p id="progressText"></p>
+                </div>
+
                 <div class="table-wrap">
                     <table id="summaryTable">
                         <thead>
@@ -55,25 +53,23 @@
                                 <th>Время</th>
                                 <th>Дефект</th>
                                 <th>Степень</th>
-                                <th>Действия</th>
+                                <th>Дополнительно</th>
                             </tr>
                         </thead>
-                        <tbody id="summaryTbody"></tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
-                <div class="chart-section">
-                    <div id="chart1" class="chart-container"></div>
-                    <div id="chart2" class="chart-container"></div>
-                    <div id="chart3" class="chart-container"></div>
+                <div class="actions-bottom">
+                    <button class="btn">Направить на почту</button>
                 </div>
             </div>
-        </section>
-
-        <div id="diagnostics"></div>
+        </div>
     </div>
 
     <footer>IT CAMP 2025 team: "PROMT"</footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
