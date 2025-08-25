@@ -59,9 +59,32 @@ def process_defects_file(input_path, output_path):
         else:
             additional_note = '-'
 
+    # Translate defect and severity to Russian
+    defect_map = {
+        'Outer Race': 'Дефект внешнего кольца',
+        'Inner Race': 'Дефект внутреннего кольца',
+        'Ball': 'Дефект тел качения',
+        'Cage': 'Дефект сепаратора',
+        'Misalignment': 'Дисбаланс',
+        'Rotor': 'Дефект ротора',
+        'Normal': 'Нормальное состояние',
+        'Unknown': 'Неизвестно'
+    }
+
+    severity_map = {
+        'Low': 'отклонения незначительны',
+        'Medium': 'отклонения свыше нормы, необходим анализ',
+        'High': 'отклонения значительны, возможен дефект',
+        '-': '-',
+        'Unknown': 'Неизвестно'
+    }
+
+    summary_defect_ru = defect_map.get(summary_defect, summary_defect)
+    summary_severity_ru = severity_map.get(summary_severity, summary_severity)
+
     # Add the data_summary columns to the DataFrame
-    df['summary_defect'] = summary_defect
-    df['summary_severity'] = summary_severity
+    df['summary_defect'] = summary_defect_ru
+    df['summary_severity'] = summary_severity_ru
     df['additional_note'] = additional_note
     df['analysis_time'] = analysis_time
 
@@ -69,8 +92,8 @@ def process_defects_file(input_path, output_path):
     df.to_csv(output_path, index=False)
 
     return {
-        'summary_defect': summary_defect,
-        'summary_severity': summary_severity,
+        'summary_defect': summary_defect_ru,
+        'summary_severity': summary_severity_ru,
         'additional_note': additional_note,
         'analysis_time': analysis_time
     }

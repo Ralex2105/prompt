@@ -71,7 +71,7 @@ body {
   gap: 10px;
   padding: 20px;
   flex: 1;
-  max-width: 1400px;
+  max-width: 4500px;
   margin: 0 auto;
 }
 
@@ -92,6 +92,7 @@ body {
   gap: 15px;
   flex-wrap: wrap;
   align-items: center;
+  margin-bottom: 20px; /* Added margin to separate from upload-controls */
 }
 
 .upload-controls {
@@ -273,13 +274,8 @@ body {
   margin-top: 20px;
 }
 
-#chart1, #chart2, #chart3 {
-  width: 100%;
-  height: 400px;
-}
-
 .table-wrap {
-  max-height: 400px;
+  max-height: 600px; /* Increased from 400px to make the table bigger */
   overflow-y: auto;
   margin-top: 16px;
   border: 1px solid var(--border);
@@ -289,7 +285,7 @@ body {
 #statsTable, #summaryTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 16px; /* Increased from 14px to make text larger */
   color: var(--text);
 }
 
@@ -297,7 +293,7 @@ body {
 #statsTable td,
 #summaryTable th,
 #summaryTable td {
-  padding: 12px 15px;
+  padding: 16px 20px; /* Increased padding for larger cells */
   text-align: left;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -360,6 +356,13 @@ body {
   gap: 10px;
   flex-wrap: wrap;
   padding: 20px 0;
+}
+
+.actions-bottom {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .toggle-panel {
