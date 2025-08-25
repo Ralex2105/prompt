@@ -5,9 +5,9 @@ import logging
 from queue import Empty
 
 from .app import logger
-from .load_preprocessing.pipeline_load_refactor import process_and_save_one_file
-from .feature_extraction.feature_extraction import extract_features_from_file
-from .model.process_defects import process_defects_file
+from src.load_preprocessing.pipeline_load_refactor import process_and_save_one_file
+from src.feature_extraction.feature_extraction import extract_features_from_file
+from src.model.process_defects import process_defects_file
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
