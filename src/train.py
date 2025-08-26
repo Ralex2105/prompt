@@ -15,7 +15,7 @@ from .load_preprocessing.data_visualiser import data_visualize, data_visualize_c
 
 # Directory paths
 RAW_DATA_DIR = "../data/data"
-PROCESSED_DATA_DIR = "../data/data_processed"
+PROCESSED_DATA_DIR = "../data/da    ta_processed"
 FEATURE_DATA_DIR = "../data/data_feature"
 SUMMARY_DATA_DIR = "../data/data_summary"
 FILE_AMOUNT = 39  # Adjusted to include current_38.csv

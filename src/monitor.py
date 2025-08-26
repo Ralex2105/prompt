@@ -1,5 +1,5 @@
 import os
-from .file_monitor import FileMonitor
+from src.file_monitor import FileMonitor
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
