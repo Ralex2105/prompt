@@ -248,46 +248,67 @@ async function showCharts(filename, row) {
     // Insert the graph row after the current row (to appear below)
     row.parentNode.insertBefore(graphTr, row.nextSibling);
 
-    // Plot the charts
-    const trace1 = {
-      x: data.map(row => parseFloat(row['f1'])),
-      y: data.map(row => parseFloat(row['f2'])),
+    // Prepare time index
+    const indices = data.map((_, i) => i);
+
+    // Determine the primary defect (assuming consistent across data)
+    const primaryDefect = data[0].defect || 'Unknown';
+
+    // Chart 1: Severity Metric (K_value) over Time with threshold lines
+    const kValues = data.map(row => parseFloat(row['K_value']));
+    const traceK = {
+      x: indices,
+      y: kValues,
       mode: 'lines+markers',
-      name: 'f1 vs f2',
-      type: 'scatter'
+      name: 'K_value (Severity Metric)',
+      type: 'scatter',
+      line: { color: '#FF4F12', width: 2 }
     };
-    Plotly.newPlot(chart1.id, [trace1], {
-      title: 'График f1 vs f2',
-      xaxis: { title: 'f1' },
-      yaxis: { title: 'f2' },
+
+    // Threshold lines
+    const lowThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 2.0, y1: 2.0, line: { color: '#2ecc71', dash: 'dash', width: 1 }, name: 'Low Threshold' };
+    const medThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 4.0, y1: 4.0, line: { color: '#f1c40f', dash: 'dash', width: 1 }, name: 'Medium Threshold' };
+    const highThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 6.0, y1: 6.0, line: { color: '#FF4F12', dash: 'dash', width: 1 }, name: 'High Threshold' };
+
+    Plotly.newPlot(chart1.id, [traceK], {
+      title: 'Метрика Тяжести (K_value) во Времени',
+      xaxis: { title: 'Индекс Временного Окна' },
+      yaxis: { title: 'Значение K' },
+      shapes: [lowThreshold, medThreshold, highThreshold],
       margin: { t: 50 }
     });
 
-    const trace2 = {
-      x: data.map(row => parseFloat(row['f3'])),
-      y: data.map(row => parseFloat(row['f4'])),
-      mode: 'lines+markers',
-      name: 'f3 vs f4',
-      type: 'scatter'
-    };
-    Plotly.newPlot(chart2.id, [trace2], {
-      title: 'График f3 vs f4',
-      xaxis: { title: 'f3' },
-      yaxis: { title: 'f4' },
+    // Chart 2: Bearing Defect Scores over Time (f1: Inner Race, f2: Outer Race, f3: Ball, f4: Cage)
+    // Relevant for bearing defects; highlight if primary defect is bearing-related
+    const traceF1 = { x: indices, y: data.map(row => parseFloat(row['f1'])), mode: 'lines', name: 'Inner Race Score (f1)', line: { color: primaryDefect === 'Inner Race' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Inner Race' ? 3 : 1 } };
+    const traceF2 = { x: indices, y: data.map(row => parseFloat(row['f2'])), mode: 'lines', name: 'Outer Race Score (f2)', line: { color: primaryDefect === 'Outer Race' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Outer Race' ? 3 : 1 } };
+    const traceF3 = { x: indices, y: data.map(row => parseFloat(row['f3'])), mode: 'lines', name: 'Ball Score (f3)', line: { color: primaryDefect === 'Ball' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Ball' ? 3 : 1 } };
+    const traceF4 = { x: indices, y: data.map(row => parseFloat(row['f4'])), mode: 'lines', name: 'Cage Score (f4)', line: { color: primaryDefect === 'Cage' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Cage' ? 3 : 1 } };
+
+    // Family threshold line (FAMILY_T = 0.0, but for visibility, show at a reasonable detection level if needed)
+    const familyThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 0.0, y1: 0.0, line: { color: '#f1c40f', dash: 'dash', width: 1 }, name: 'Detection Threshold' };
+
+    Plotly.newPlot(chart2.id, [traceF1, traceF2, traceF3, traceF4], {
+      title: 'Оценки Дефектов Подшипника во Времени',
+      xaxis: { title: 'Индекс Временного Окна' },
+      yaxis: { title: 'Оценка Дефекта' },
+      shapes: [familyThreshold],
       margin: { t: 50 }
     });
 
-    const trace3 = [
-      { x: data.map(row => parseFloat(row['f5'])), y: data.map((_, i) => i), mode: 'lines', name: 'f5' },
-      { x: data.map(row => parseFloat(row['f6'])), y: data.map((_, i) => i), mode: 'lines', name: 'f6' },
-      { x: data.map(row => parseFloat(row['f7'])), y: data.map((_, i) => i), mode: 'lines', name: 'f7' },
-      { x: data.map(row => parseFloat(row['f8'])), y: data.map((_, i) => i), mode: 'lines', name: 'f8' },
-      { x: data.map(row => parseFloat(row['f9'])), y: data.map((_, i) => i), mode: 'lines', name: 'f9' }
-    ];
-    Plotly.newPlot(chart3.id, trace3, {
-      title: 'График f5-f9',
-      xaxis: { title: 'Значения' },
-      yaxis: { title: 'Индекс' },
+    // Chart 3: Rotor/Misalignment/Imbalance Related Features (f5: MCSA Shaft Sidebands, f26: Envelope Slope)
+    // Highlight f5 for Rotor/Imbalance/Misalignment
+    const traceF5 = { x: indices, y: data.map(row => parseFloat(row['f5'])), mode: 'lines', name: 'MCSA Shaft Sidebands (f5)', line: { color: ['Rotor', 'Imbalance', 'Misalignment'].includes(primaryDefect) ? '#FF4F12' : '#ffffff', width: ['Rotor', 'Imbalance', 'Misalignment'].includes(primaryDefect) ? 3 : 1 } };
+    const traceF26 = { x: indices, y: data.map(row => parseFloat(row['f26'])), mode: 'lines', name: 'Envelope Spectrum Slope (f26)', line: { color: '#2ecc71' } };
+
+    // Additional highlight lines (e.g., for rotor SNR threshold ~5.0 from ROTOR_SNR_T)
+    const rotorSNRThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 5.0, y1: 5.0, line: { color: '#f1c40f', dash: 'dash', width: 1 }, name: 'Rotor SNR Threshold' };
+
+    Plotly.newPlot(chart3.id, [traceF5, traceF26], {
+      title: 'Признаки, Связанные с Ротором/Расцентровкой/Дисбалансом',
+      xaxis: { title: 'Индекс Временного Окна' },
+      yaxis: { title: 'Значение Признака' },
+      shapes: [rotorSNRThreshold],
       margin: { t: 50 }
     });
 
