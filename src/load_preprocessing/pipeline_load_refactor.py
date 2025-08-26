@@ -1,6 +1,6 @@
-from src.load_preprocessing.data_loader import load_current_data
-from src.load_preprocessing.preprocessing import preprocess_data
-from src.feature_extraction.feature_extraction import extract_features_from_file
+from .data_loader import load_current_data
+from .preprocessing import preprocess_data
+from src.feature_extraction.feature_extraction import extract_features_from_file, extract_features_from_file_for_learning
 import os
 
 def csv_sort(data_dir: str):
@@ -93,6 +93,24 @@ def features_for_one_file(input_file: str, output_file: str) -> bool:
         return False
 
 
+def features_for_one_file_for_all(input_file: str, output_file: str) -> bool:
+    print(f"Обработка файла: {input_file}")
+    try:
+        # Extract features directly from the input file path
+        df_features = extract_features_from_file_for_learning(input_file)
+        # Save the resulting features to the output file
+        df_features.to_csv(output_file, index=False)
+        print(f"[OK] Обработанный файл сохранен: {output_file}")
+        return True
+
+    except FileNotFoundError:
+        print(f"[ERROR] Файл {input_file} не найден")
+        return False
+    except Exception as e:
+        print(f"[ERROR] Ошибка при обработке файла {input_file}: {str(e)}")
+        return False
+
+
 def features_for_all_files(data_dir: str):
     
     print(f"Начало выделения признаков и таргета файлов в директории: {data_dir}")
@@ -117,7 +135,7 @@ def features_for_all_files(data_dir: str):
                 output_filename = f"{base_name}_features.csv"
             output_path = os.path.join(features_dir, output_filename)
             
-            if features_for_one_file(input_path, output_path):
+            if features_for_one_file_for_all(input_path, output_path):
                 features_files.append(csv_file)
             else:
                 failed_files.append(csv_file)

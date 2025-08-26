@@ -1,5 +1,5 @@
 import numpy as np
-import data_transform as dt
+from . import data_transform as dt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score 
 from catboost import CatBoostClassifier

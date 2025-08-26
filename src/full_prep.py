@@ -4,7 +4,7 @@ from src.load_preprocessing.pipeline_load_refactor import process_and_save_all_f
 from src.load_preprocessing.pipeline_load_refactor import features_for_all_files
 
 # Get the project root directory (one level up from src)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Directory paths
 RAW_DATA_DIR = os.path.join(PROJECT_ROOT, 'data', 'data')

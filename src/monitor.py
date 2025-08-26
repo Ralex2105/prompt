@@ -1,5 +1,6 @@
 import os
-from src.file_monitor import FileMonitor
+
+from .file_monitor import FileMonitor
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -8,6 +9,8 @@ RAW_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data")
 PROCESSED_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_processed")
 FEATURE_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_feature")
 SUMMARY_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_summary")
+Machine_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_ml")
+
 
 from multiprocessing import Queue
 
