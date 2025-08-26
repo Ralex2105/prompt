@@ -18,12 +18,15 @@ DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data")
 SUMMARY_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_summary")
 PROCESSED_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_processed")
 FEATURE_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_feature")
+DATA_ML_DIR = os.path.join(BASE_DIR, "..", "data", "data_ml")
+
 
 # Create directories if not exist
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(SUMMARY_DATA_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 os.makedirs(FEATURE_DATA_DIR, exist_ok=True)
+os.makedirs(DATA_ML_DIR, exist_ok=True)
 
 def get_next_file_number():
     """Generate the next file number based on existing files in DATA_DIR."""
@@ -57,8 +60,26 @@ async def get_summary():
             logger.error(f"Summary directory does not exist: {SUMMARY_DATA_DIR}")
             return JSONResponse(status_code=404, content={"message": "Summary directory not found"})
 
-        files = [f for f in os.listdir(SUMMARY_DATA_DIR) if f.endswith('.csv')]
+        # Берём только summary_data_*.csv и сортируем по номеру (новые выше)
+        def _num(name: str) -> int:
+            try:
+                return int(name.replace("summary_data_", "").replace(".csv", ""))
+            except Exception:
+                return -1
+
+        files = sorted(
+            [f for f in os.listdir(SUMMARY_DATA_DIR) if f.startswith("summary_data_") and f.endswith(".csv")],
+            key=_num, reverse=True
+        )
         logger.info(f"Found {len(files)} summary files: {files}")
+
+        def safe_get(df, col, default="N/A"):
+            if col in df.columns and not df.empty:
+                val = df[col].iloc[0]
+                # JSONResponse не любит NaN — приводим к строке/дефолту
+                if pd.notna(val):
+                    return str(val)
+            return default
 
         for filename in files:
             file_path = os.path.join(SUMMARY_DATA_DIR, filename)
@@ -67,19 +88,15 @@ async def get_summary():
                 df = pd.read_csv(file_path)
                 summary = {
                     "filename": filename,
-                    "summary_defect": df['summary_defect'].iloc[0] if 'summary_defect' in df.columns else "N/A",
-                    "summary_severity": df['summary_severity'].iloc[0] if 'summary_severity' in df.columns else "N/A",
-                    "additional_note": df['additional_note'].iloc[0] if 'additional_note' in df.columns else "N/A",
-                    "analysis_time": df['analysis_time'].iloc[0] if 'analysis_time' in df.columns else "N/A"
+                    "summary_defect":  safe_get(df, "summary_defect"),
+                    "summary_severity": safe_get(df, "summary_severity"),
+                    "additional_note": safe_get(df, "additional_note"),
+                    "analysis_time":   safe_get(df, "analysis_time"),
                 }
                 summaries.append(summary)
             except Exception as e:
                 logger.error(f"Error reading summary file {file_path}: {str(e)}")
                 continue
-
-        if not summaries:
-            logger.warning("No valid summary files found")
-            return JSONResponse(status_code=200, content={"summaries": [], "message": "No summary files found"})
 
         return JSONResponse(status_code=200, content={"summaries": summaries})
     except Exception as e:
@@ -107,15 +124,17 @@ async def get_uploaded_files():
         return JSONResponse(status_code=500, content={"message": str(e)})
 
 @app.delete("/delete_file/{filename}")
+@app.delete("/delete_file/{filename}")
 async def delete_file(filename: str):
     try:
-        # Extract file number from summary filename (e.g., summary_data_1.csv -> 1)
+        # Extract file number from summary filename (e.g. summary_data_1.csv -> 1)
         file_number = filename.split('_')[-1].replace('.csv', '')
         directories = [
-            (DATA_DIR, f"current_{file_number}.csv"),
+            (DATA_DIR,        f"current_{file_number}.csv"),
             (SUMMARY_DATA_DIR, filename),
             (PROCESSED_DATA_DIR, f"processed_{file_number}.csv"),
-            (FEATURE_DATA_DIR, f"feature_data_{file_number}.csv")
+            (FEATURE_DATA_DIR,   f"feature_data_{file_number}.csv"),
+            (DATA_ML_DIR,        f"ml_data_{file_number}.csv"),  # <-- добавили
         ]
         deleted = False
         for directory, fname in directories:

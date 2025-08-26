@@ -39,7 +39,9 @@ def process_defects_file(input_path, output_path):
         # Filter non-Normal
         non_normal_df = df[df['defect'] != 'Normal']
         if not non_normal_df.empty:
-            non_normal_df['defect_severity'] = non_normal_df['defect'] + '_' + non_normal_df['severity']
+            non_normal_df['defect_severity'] = (
+                    non_normal_df['defect'].astype(str) + '_' + non_normal_df['severity'].astype(str)
+            )
             defect_severity_counts = Counter(non_normal_df['defect_severity'])
             max_count = max(defect_severity_counts.values())
             most_frequent = [combo for combo, count in defect_severity_counts.items() if count == max_count]
