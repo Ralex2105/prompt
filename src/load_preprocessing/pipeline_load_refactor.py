@@ -20,6 +20,11 @@ def process_and_save_one_file(input_file: str, output_file: str) -> bool:
         print(f"❌ Ошибка при обработке файла {input_file}: {str(e)}")
         return False
 
+def csv_sort(data_dir: str):
+    csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
+    csv_files.sort(key=lambda x: int(x.split('_')[1].split('.')[0]))
+    return csv_files
+
 
 def process_and_save_all_files(data_dir: str):
     
