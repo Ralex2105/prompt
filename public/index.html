@@ -60,7 +60,7 @@
                     </table>
                 </div>
                 <div class="actions-bottom">
-                    <button class="btn">Направить на почту</button>
+                    <button id="sendEmailBtn" class="btn" data-summary="summary">Направить на почту</button>
                 </div>
             </div>
         </div>
@@ -71,5 +71,28 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <script src="script.js"></script>
+
+  <!-- Email Modal -->
+  <div id="emailModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-content email-modal">
+      <button class="modal-close" id="emailModalClose" aria-label="Закрыть окно">×</button>
+      <h3>Отправка на почту</h3>
+
+      <label class="field">
+        <span>Почта</span>
+        <input type="email" id="emailInput" placeholder="user@example.com" required>
+      </label>
+
+      <div class="summary-note">
+        <strong>Краткое описание:</strong>
+        <div id="summaryName">summary</div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="emailModalSend" class="btn">Отправить</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

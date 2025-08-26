@@ -452,3 +452,77 @@ function showAlert(message, type) {
 }
 
 init();
+
+// --- Email modal (non-breaking) ---
+(function() {
+  const openBtn = document.getElementById('sendEmailBtn');
+  const modal = document.getElementById('emailModal');
+  const closeBtn = document.getElementById('emailModalClose');
+  const sendBtn = document.getElementById('emailModalSend');
+  const emailInput = document.getElementById('emailInput');
+  const summaryNameEl = document.getElementById('summaryName');
+
+  if (!openBtn || !modal) return;
+
+  function inferSummaryName() {
+    // Try data attribute on button first
+    let name = openBtn.dataset.summary || '';
+    try {
+      // Fallback: take the file name from the last row of #summaryTable
+      const tbody = document.querySelector('#summaryTable tbody');
+      if (!name && tbody && tbody.rows.length) {
+        const lastRow = tbody.rows[tbody.rows.length - 1];
+        const cellText = lastRow && lastRow.cells && lastRow.cells[0] ? lastRow.cells[0].textContent.trim() : '';
+        if (cellText) name = cellText;
+      }
+    } catch (e) {}
+    return name || 'summary';
+  }
+
+  function openModal() {
+    summaryNameEl.textContent = inferSummaryName();
+    modal.classList.remove('hidden');
+    document.body.classList.add('blurred');
+    // Allow the modal to render before focusing
+    setTimeout(() => emailInput && emailInput.focus(), 0);
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    document.body.classList.remove('blurred');
+  }
+
+  openBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    openModal();
+  });
+
+  closeBtn && closeBtn.addEventListener('click', closeModal);
+
+  // Close on click outside content
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Close on ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+
+  // Confirm send - dispatch a custom event without touching existing logic
+  sendBtn && sendBtn.addEventListener('click', () => {
+    const email = (emailInput && emailInput.value || '').trim();
+    if (!email) {
+      alert('Укажите корректный адрес почты');
+      emailInput && emailInput.focus();
+      return;
+    }
+    const payload = { email, summary: summaryNameEl ? summaryNameEl.textContent : 'summary' };
+    // Consumers can listen to this without modifying current code:
+    // document.addEventListener('sendSummaryByEmail', (e)=>{ ... })
+    document.dispatchEvent(new CustomEvent('sendSummaryByEmail', { detail: payload }));
+    closeModal();
+  });
+})();
