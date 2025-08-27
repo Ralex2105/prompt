@@ -9,7 +9,6 @@ from .feature_extraction.feature_extraction import extract_features_from_file
 from .model.process_defects import process_defects_file
 
 
-# --- ML inference helper -----------------------------------------------------
 def run_ml_inference_file(input_path: str, output_path: str):
     """
     Инференс CatBoost по фичам -> запись ml_data_*.csv.
@@ -28,7 +27,7 @@ def run_ml_inference_file(input_path: str, output_path: str):
 
     df = pd.read_csv(input_path)
 
-    # 1) фичи (как раньше)
+    # 1) фичи
     exclude = {"defect", "severity", "summary_defect", "summary_severity", "additional_note", "analysis_time"}
     feature_cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])]
     if not feature_cols:
@@ -40,7 +39,7 @@ def run_ml_inference_file(input_path: str, output_path: str):
             raise ValueError("Не найдено числовых фич для инференса.")
     X = df[feature_cols].copy()
 
-    # 2) поиск моделей (как раньше)
+    # 2) поиск моделей
     here = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(here, ".."))
     model_dir_env = os.getenv("MODEL_DIR")
@@ -89,20 +88,17 @@ def run_ml_inference_file(input_path: str, output_path: str):
     defect_raw = _to_1d(defect_clf.predict(pool, prediction_type="Class"))
     severity_raw = _to_1d(severity_clf.predict(pool, prediction_type="Class"))
 
-    # 4) МАППИНГ ИНДЕКС -> СТРОКА (как в data_transform.py)
+    # 4) МАППИНГ ИНДЕКС -> СТРОКА
     DEFECT_NAMES = ["Normal", "Inner Race", "Outer Race", "Ball", "Cage", "Rotor", "Misalignment"]  # индексы 0..6
     SEVERITY_NAMES = ["None", "Low", "Medium", "High"]  # индексы 0..3
-    # Примечание: в обучении defect кодировался индексом из списка, severity — 0(None),1,2,3. :contentReference[oaicite:1]{index=1}
 
     def _map_to_names(arr, names):
         out = []
         K = len(names)
         for v in arr:
-            # если модель уже вернула строку — оставляем
             if isinstance(v, str) and not v.isdigit():
                 out.append(v)
                 continue
-            # иначе пробуем как число
             try:
                 i = int(v)
                 out.append(names[i] if 0 <= i < K else str(v))
@@ -113,7 +109,7 @@ def run_ml_inference_file(input_path: str, output_path: str):
     defect_labels = _map_to_names(defect_raw, DEFECT_NAMES)
     severity_labels = _map_to_names(severity_raw, SEVERITY_NAMES)
 
-    # 5) сохранение — уже со строками
+    # 5) сохранение
     out = df.copy()
     out["defect"] = defect_labels
     out["severity"] = severity_labels
@@ -165,7 +161,6 @@ class FileMonitor:
             self._proc.terminate()
         logger.info(f"[{self.action}] monitor stopped")
 
-    # --- внутреннее ----------------------------------------------------------
 
     def _monitor_loop(self):
         while not self._stop_event.is_set():
@@ -184,8 +179,6 @@ class FileMonitor:
                     )
                     if not ok:
                         continue
-
-                    # Не зацикливаться на одном файле при ошибке
                     try:
                         self._process_file(file)
                     except Exception as e:
@@ -235,7 +228,6 @@ class FileMonitor:
                 logger.info(f"[{self.action}] Additional Note: {result.get('additional_note')}")
                 logger.info(f"[{self.action}] Analysis Time: {result.get('analysis_time')}")
 
-        # Прокидываем имя результирующего файла дальше по конвейеру (если есть очередь)
         if self.queue:
             identifier = (
                 file.replace("current_", "")

@@ -1,14 +1,12 @@
 import numpy as np
 
-# --- Configuration & Geometry for NSK6205DDU ---
-FS = 25600  # sampling frequency Hz
+FS = 25600
 N_BALLS = 9
-D = 0.052  # m (52 mm)
-d = 0.025  # m (25 mm)
-phi = 0.0  # contact angle (rad)
+D = 0.052
+d = 0.025
+phi = 0.0
 RPM = 1770
 
-# Severity thresholds
 SEVERITY_THRESHOLDS = {
     'low': 0.1,
     'medium': 0.3
@@ -37,7 +35,6 @@ def detect_peaks_at(freqs, spectrum, target_freqs, tol=0.05):
     return peaks
 
 def classify_defect(peaks):
-    # pick the fault with max amplitude
     fault, amp = max(peaks.items(), key=lambda x: x[1])
     if amp <= 0:
         return None, 0.0

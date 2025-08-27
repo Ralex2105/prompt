@@ -5,7 +5,7 @@ from src.load_preprocessing.pipeline_load_refactor import process_and_save_one_f
 
 RAW_DATA_DIR = "../prompt/data"
 PROCESSED_DATA_DIR = "../prompt/data_processed"
-FILE_AMOUNT = 36  # 35 + 1
+FILE_AMOUNT = 36 
 
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 
@@ -27,7 +27,6 @@ class TestDataProcessingPipeline(unittest.TestCase):
         for file_number in range(1, FILE_AMOUNT):
             processed_file = os.path.join(PROCESSED_DATA_DIR, f"processed_{file_number}.csv")
             df = pd.read_csv(processed_file)
-            # Проверяем, что нет строк, где все фазы NaN
             self.assertFalse(df.isnull().all(axis=1).any(),
                              f"Есть полностью пустые строки в файле: {processed_file}")
 

@@ -1,4 +1,3 @@
-# test_feature_classifier.py
 import numpy as np
 import src.feature_extraction.feature_classifier as fc
 

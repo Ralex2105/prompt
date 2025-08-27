@@ -2,97 +2,88 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>ССПТД</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация</title>
+    <link rel="stylesheet" href="loginstyle.css">
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <h1>ССПТД</h1>
-            <div class="sub">система снятия показателей токовой диагностики</div>
-        </div>
+    <div class="error-message" id="errorMessage">
+        ❌ Неверный логин или пароль
     </div>
 
-    <div class="container">
-        <div class="controls-section">
-            <div class="card">
-                <div class="controls">
-                    <button id="apiConnectBtn" class="btn">🔌 Подключить API</button>
-                    <label>Интервал:</label>
-                    <select id="sampleInterval">
-                        <option>Авто-время</option>
-                    </select>
-                    <label>С:</label>
-                    <input type="date" id="fromDate">
-                    <label>До:</label>
-                    <input type="date" id="toDate">
-                    <button id="startBtn" class="btn">СТАРТ</button>
-                </div>
+    <div class="auth-container">
+        <h1>Авторизация</h1>
+        <p class="subtitle">Используйте ваши доменные данные в формате Домен\имя пользователя:</p>
 
-                <div class="upload-controls">
-                    <div class="upload-block">
-                        <input type="file" id="fileInput" multiple hidden>
-                        <button id="selectFilesBtn" class="btn">📁 Выбрать файлы</button>
-                        <button id="refreshFilesBtn" class="btn">🔄 Обновить</button>
-                    </div>
-                </div>
+        <form id="authForm" class="auth-form" onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label for="login">Введите логин</label>
+                <input type="text" id="login" placeholder="Логин" required>
+            </div>
 
-                <div id="diagnostics"></div>
-                <div id="processingMessage" class="diagnostic-item info" style="display: none;"></div>
-
-                <div class="start-wrapper">
-                    <div id="spinner" class="spinner hidden"></div>
-                    <p id="progressText"></p>
-                </div>
-
-                <div class="table-wrap">
-                    <table id="summaryTable">
-                        <thead>
-                            <tr>
-                                <th>Файл</th>
-                                <th>Время</th>
-                                <th>Дефект</th>
-                                <th>Степень</th>
-                                <th>Дополнительно</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div class="actions-bottom">
-                    <button id="sendEmailBtn" class="btn" data-summary="summary">Направить на почту</button>
+            <div class="input-group password-group">
+                <label for="password">Введите пароль</label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="password" placeholder="Пароль" required>
+                    <span class="eye-icon" onclick="togglePassword()">👁️</span>
                 </div>
             </div>
-        </div>
+
+            <button type="submit" class="btn primary" id="goHome">Войти</button>
+        
+        </form>
     </div>
 
-    <footer>IT CAMP 2025 team: "PROMT"</footer>
+    <footer class="footer">
+        IT CAMP 2025 team: "PROMT"
+    </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-    <script src="script.js"></script>
+    <script>
+        // Заданные учетные данные
+        const validLogin = "test.test@it.camp.ru";
+        const validPassword = "password123";
 
-  <!-- Email Modal -->
-  <div id="emailModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-content email-modal">
-      <button class="modal-close" id="emailModalClose" aria-label="Закрыть окно">×</button>
-      <h3>Отправка на почту</h3>
+        // Переключение видимости пароля
+        function togglePassword() {
+            const passwordInput = document.getElementById("password");
+            const eyeIcon = document.querySelector(".eye-icon");
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                eyeIcon.textContent = "🙈";
+            } else {
+                passwordInput.type = "password";
+                eyeIcon.textContent = "👁️";
+            }
+        }
 
-      <label class="field">
-        <span>Почта</span>
-        <input type="email" id="emailInput" placeholder="user@example.com" required>
-      </label>
+        // Обработка входа
+        function handleLogin(event) {
+            event.preventDefault(); // Предотвращаем перезагрузку страницы
 
-      <div class="summary-note">
-        <strong>Краткое описание:</strong>
-        <div id="summaryName">summary</div>
-      </div>
+            const loginInput = document.getElementById("login").value;
+            const passwordInput = document.getElementById("password").value;
+            const errorMessage = document.getElementById("errorMessage");
 
-      <div class="modal-actions">
-        <button id="emailModalSend" class="btn">Отправить</button>
-      </div>
-    </div>
-  </div>
+            // Проверка учетных данных
+            if (loginInput === validLogin && passwordInput === validPassword) {
+    
+              
+                document.getElementById("goHome").addEventListener("click", function() {
+                    window.location.href = "home.html"
+                }
+            );
+    
+            } else {
+                // Показать сообщение об ошибке
+                errorMessage.classList.remove("hidden");
+                setTimeout(() => {
+                    errorMessage.classList.add("hidden");
+                }, 3000); // Скрыть через 3 секунды
+            }
+        }
 
+        // Скрыть сообщение об ошибке при загрузке страницы
+        document.getElementById("errorMessage").classList.add("hidden");
+    </script>
 </body>
 </html>

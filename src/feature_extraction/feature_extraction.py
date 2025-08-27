@@ -1,9 +1,3 @@
-# feature_extraction.py
-# -*- coding: utf-8 -*-
-"""
-Backwards-compatible feature extraction (минорные косметические правки).
-API сохранён: extract_features_from_file(csv_path, output_path=None, fs=DEFAULT_FS, rpm_guess=DEFAULT_RPM)
-"""
 from __future__ import annotations
 import os
 import math
@@ -22,10 +16,10 @@ except ImportError:
         DEFAULT_FS, DEFAULT_RPM, get_feature_vector, classify_defect_scored, severity_from_K
     )
 
-WINDOW_SEC = 1.0
-STEP_SEC = 0.5
-MIN_VALID_RATIO = 0.80
-CHUNK_SECONDS = 10.0
+WINDOW_SEC = 0.2
+STEP_SEC = 0.4
+MIN_VALID_RATIO = 0.6
+CHUNK_SECONDS = 4.0
 BEARING_DEFECTS = {"Inner Race", "Outer Race", "Ball", "Cage"}
 
 def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -148,7 +142,6 @@ def extract_features_from_file(csv_path: str,
     out["K_value"] = Kvals
     out["fault_code"] = codes
 
-    # адаптивная перекалибровка только для подшипников (как было)
     BEARING_DEFECTS = {"Inner Race", "Outer Race", "Ball", "Cage"}
     is_bearing = out["defect"].isin(BEARING_DEFECTS)
     if is_bearing.any():
@@ -250,7 +243,6 @@ def extract_features_from_file_for_learning(csv_path: str,
     out["K_value"] = Kvals
     out["fault_code"] = codes
 
-    # адаптивная перекалибровка только для подшипников (как было)
     BEARING_DEFECTS = {"Inner Race", "Outer Race", "Ball", "Cage"}
     is_bearing = out["defect"].isin(BEARING_DEFECTS)
     if is_bearing.any():

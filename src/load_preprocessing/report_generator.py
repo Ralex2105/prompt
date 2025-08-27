@@ -8,10 +8,6 @@ from data_loader import load_current_data
 from datetime import datetime
 
 def natural_sort_key(s):
-    """
-    Generate a key for natural sorting of strings containing numbers.
-    This ensures that 'file2.csv' comes before 'file10.csv'.
-    """
     return [
         int(text) if text.isdigit() else text.lower()
         for text in re.split(r'(\d+)', str(s))
@@ -63,18 +59,17 @@ def generate_report_for_file(file_path: str, doc: Document):
     try:
         # График токов фаз
         plt.figure(figsize=(10, 6))
-        data_visualize(df, 5000)  # Используем загруженный DataFrame
+        data_visualize(df, 5000) 
         plt.savefig(temp_img, bbox_inches='tight', dpi=100)
         plt.close()
         doc.add_picture(temp_img, width=Inches(6))
         doc.add_paragraph('Рисунок 1: График токов трёх фаз')
         
     finally:
-        # Удаляем временный файл
+    
         if os.path.exists(temp_img):
             os.remove(temp_img)
     
-    # Добавляем разделитель между отчётами
     doc.add_page_break()
 
 def generate_reports(directory: str, output_file: str = None):
@@ -89,13 +84,11 @@ def generate_reports(directory: str, output_file: str = None):
         timestamp = datetime.now().strftime('%Y%m%d')
         output_file = f'reports_{timestamp}.docx'
     
-    # Создаем новый документ
     doc = Document()
     doc.add_heading('Отчёт по датасету токов электродвигателя', level=0)
     doc.add_paragraph(f'Дата генерации: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
     
     try:
-        # Получаем список CSV файлов в директории и сортируем их естественным образом
         csv_files = sorted(
             [f for f in os.listdir(directory) if f.endswith('.csv')],
             key=natural_sort_key
@@ -105,7 +98,6 @@ def generate_reports(directory: str, output_file: str = None):
             print(f'В директории {directory} не найдено CSV файлов')
             return
         
-        # Обрабатываем каждый файл
         total_files = len(csv_files)
         for i, filename in enumerate(csv_files, 1):
             file_path = os.path.join(directory, filename)
@@ -115,7 +107,6 @@ def generate_reports(directory: str, output_file: str = None):
             except Exception as e:
                 print(f'Ошибка при обработке файла {filename}: {str(e)}')
         
-        # Сохраняем документ
         doc.save(output_file)
         print(f'Отчёт успешно сохранён в файл: {os.path.abspath(output_file)}')
         
@@ -124,5 +115,4 @@ def generate_reports(directory: str, output_file: str = None):
         raise
 
 if __name__ == "__main__":
-    # Пример использования
     generate_reports('processed_files')

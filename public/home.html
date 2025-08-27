@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ССПТД</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+       <div class="header-left">
+            <h1>ССПТД</h1>
+            <div class="sub">система снятия показателей токовой диагностики</div>
+        </div>
+            <div class="status">
+
+            <button class="btn small" id="logoutBtn">Выйти</button>
+            <script>
+                document.getElementById("logoutBtn").addEventListener("click", function() {
+                    window.location.href = "index.html"
+                }
+            );
+            </script>
+        </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="controls-section">
+            <div class="card">
+                <div class="controls">
+                    <button id="apiConnectBtn" class="btn">🔌 Подключить API</button>
+                    <label>Интервал:</label>
+                    <select id="sampleInterval">
+                        <option>Авто-время</option>
+                    </select>
+                    <label>С:</label>
+                    <input type="date" id="fromDate">
+                    <label>До:</label>
+                    <input type="date" id="toDate">
+                    <button id="startBtn" class="btn">СТАРТ</button>
+                </div>
+
+                <div class="upload-controls">
+                    <div class="upload-block">
+                        <input type="file" id="fileInput" multiple hidden>
+                        <button id="selectFilesBtn" class="btn">📁 Выбрать файлы</button>
+                        <button id="refreshFilesBtn" class="btn">🔄 Обновить</button>
+                    </div>
+                </div>
+
+                <div id="diagnostics"></div>
+                <div id="processingMessage" class="diagnostic-item info" style="display: none;"></div>
+
+                <div class="start-wrapper">
+                    <div id="spinner" class="spinner hidden"></div>
+                    <p id="progressText"></p>
+                </div>
+
+                <div class="table-wrap">
+                    <table id="summaryTable">
+                        <thead>
+                            <tr>
+                                <th>Файл</th>
+                                <th>Время</th>
+                                <th>Дефект</th>
+                                <th>Степень</th>
+                                <th>Дополнительно</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="actions-bottom">
+                    <button id="sendEmailBtn" class="btn" data-summary="summary">Направить на почту</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>IT CAMP 2025 team: "PROMT"</footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="script.js"></script>
+
+  <!-- Email Modal -->
+
+
+<div class="overlay" id="mailOverlay" hidden>
+  <div class="modal">
+    <form id="mailForm">
+      <h3>Направить на почту</h3>
+
+      <label>
+        <span>Почта</span>
+        <input type="email" id="mailTo" placeholder="name@example.com" required>
+      </label>
+
+      <label>
+        <span>Сообщение</span>
+        <textarea id="mailMsg" rows="5" placeholder="Текст…" required></textarea>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn outline" id="cancelMail">Отмена</button>
+        <button type="submit" class="btn">Отправить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+</body>
+</html>

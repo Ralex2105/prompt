@@ -1,6 +1,3 @@
-# feature_classifier.py
-# === file: feature_classifier.py ===
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 import json, math
 from dataclasses import dataclass
@@ -15,12 +12,9 @@ try:
 except Exception:
     from fault_params import CONFIG
 
-# === константы (API сохранён) ===
 DEFAULT_FS: int = 25600
-DEFAULT_RPM: float = 3010.0  # Обновлено под ваш мотор
+DEFAULT_RPM: float = 1770.0
 
-
-# ---- безопасная нормировка частот для Баттерворта ----
 def _safe_norm(fc, fs):
     ny = max(1e-6, 0.5 * fs)
 
@@ -57,7 +51,6 @@ def _mcsa_sidebands_score(f_psd: NDArray[np.float64], Pxx: NDArray[np.float64],
         m = (f_psd >= freq - bw) & (f_psd <= freq + bw)
         return float(np.max(Pxx[m]) if np.any(m) else 0.0)
 
-    # шум над фундаментом (+ исключаем 2–3-ю гармоники)
     mask_noise = (f_psd >= mains + 5.0) & (f_psd <= mains + 80.0)
     for k in (2, 3):
         mask_noise &= ~((f_psd >= k * mains - 2.0) & (f_psd <= k * mains + 2.0))
@@ -71,7 +64,6 @@ def _mcsa_sidebands_score(f_psd: NDArray[np.float64], Pxx: NDArray[np.float64],
 
 def _autoselect_shaft_hz(env_f: NDArray[np.float64], env_A: NDArray[np.float64], rpm_guess: float) -> float:
     base = max(0.1, rpm_guess / 60.0)
-    # окно расширено до ±30%
     cand = np.linspace(0.70 * base, 1.30 * base, 25)
 
     def fam_total(fr_):
@@ -98,7 +90,6 @@ def _autoselect_shaft_hz(env_f: NDArray[np.float64], env_A: NDArray[np.float64],
 
 def _fft_amp(x: NDArray[np.float64], fs: float) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Амплитудный спектр (односторонний) с нормировкой на окно Ханна.
-
     Args:
         x: временной ряд (A).
         fs: частота дискретизации, Гц.
@@ -106,20 +97,15 @@ def _fft_amp(x: NDArray[np.float64], fs: float) -> Tuple[NDArray[np.float64], ND
     Returns:
         f: массив частот (Гц),
         amp: амплитудный спектр (в тех же единицах, что x), нормированный на суммарную амплитуду окна.
-
-    Rationale:
-        Нормировка на окно позволяет сравнивать пики между разными длинами/окнами.
     """
     n = int(2 ** math.ceil(math.log2(max(8, len(x)))))
     if n <= 8:
         return np.array([0.0]), np.array([0.0])
     X = np.fft.rfft(x * np.hanning(len(x)), n=n)
     f = np.fft.rfftfreq(n, d=1.0 / fs)
-    amp = (2.0 / (np.sum(np.hanning(len(x))) + 1e-12)) * np.abs(X)  # нормировка на окно
+    amp = (2.0 / (np.sum(np.hanning(len(x))) + 1e-12)) * np.abs(X)
     return f, amp
 
-
-# === Предобработка каналов (имя сохранено) ===
 
 def preprocess_per_phase(x: NDArray[np.float64], fs: float) -> NDArray[np.float64]:
     """Предобработка фазного тока: центрирование, подавление дрейфа, очистка NaN.
@@ -130,24 +116,18 @@ def preprocess_per_phase(x: NDArray[np.float64], fs: float) -> NDArray[np.float6
 
     Returns:
         Предобработанный сигнал той же длины.
-
-    Rationale:
-        Удаление DC/дрейфа (HPF) повышает устойчивость спектральной и демодуляционной оценки.
     """
     x = np.asarray(x, dtype=float)
     if x.size == 0:
         return x
     x = x - np.nanmean(x)
-    x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)  # Добавлено для большей робастности
+    x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
     try:
         if CONFIG["HPF_HZ"] and CONFIG["HPF_HZ"] > 0:
             x = _butter(x, fs, CONFIG["HPF_HZ"], "highpass", order=2)
     except Exception:
         pass
     return x
-
-
-# === Огибающая 2–3 кГц (имя сохранено) ===
 
 def envelope_spectrum_2_3k(x: NDArray[np.float64], fs: float) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Спектр огибающей после ВЧ-полосовой фильтрации и преобразования Хилберта.
@@ -159,11 +139,6 @@ def envelope_spectrum_2_3k(x: NDArray[np.float64], fs: float) -> Tuple[NDArray[n
     Returns:
         fe: частоты спектра огибающей (Гц).
         Ae: амплитудный спектр огибающей (условные единицы).
-
-    Rationale:
-        Демодуляция (Hilbert) подсвечивает ударные ВЧ-компоненты подшипника и переносит их в НЧ-область
-        (BPFI/BPFO/BSF/FTF и их гармоники/боковые ±f_r), что облегчает выявление дефектов по току.
-        Полоса выбирается адаптивно по максимуму куртозиса (аналог поиска резонансного окна).
     """
     lo, hi = CONFIG["ENV_BAND_DEFAULT"]
     if CONFIG.get("USE_ADAPTIVE_ENVELOPE", True):
@@ -201,9 +176,6 @@ def _safe_stats(x: NDArray[np.float64]) -> Tuple[float, float, float, float, flo
 
     Returns:
         (std, skew, kurt, mean, entropy), где kurt — эксцесс (kurtosis-3).
-
-    Rationale:
-        Дополнительные признаки распределения спектральной огибающей для ранжирования семейства.
     """
     x = np.asarray(x, dtype=float)
     x = x[np.isfinite(x)]
@@ -230,15 +202,10 @@ def _safe_kurtosis(x: NDArray[np.float64]) -> float:
 
     Returns:
         kurtosis-3 (float).
-
-    Rationale:
-        Используется как критерий «ударности» полос в адаптивной демодуляции.
     """
     s, _, ku, _, _ = _safe_stats(x)
     return ku if s > 0 else 0.0
 
-
-# === Геометрия подшипника / частоты дефектов ===
 
 @dataclass
 class BearingSet:
@@ -275,12 +242,6 @@ def _bearing_family(shaft_hz: float) -> BearingSet:
 
     Returns:
         BearingSet(BPFI, BPFO, BSF, FTF) в Гц.
-
-    Rationale:
-        Стандартные кинематические формулы:
-            BPFI=(N/2)·f_r·(1 + (d/D)·cosθ), BPFO=(N/2)·f_r·(1 − (d/D)·cosθ),
-            BSF=(D/(2d))·f_r·(1 − (d/D·cosθ)^2), FTF=0.5·f_r·(1 − (d/D)·cosθ).
-        При отсутствии геометрии используем типичные коэффициенты для NSK 6205.
     """
     cfg = _load_bearing_config()
     if cfg:
@@ -336,11 +297,8 @@ def _bearing_family(shaft_hz: float) -> BearingSet:
                               vals.get("BPFO", 3.175 * shaft_hz),
                               vals.get("BSF", 2.322 * shaft_hz),
                               vals.get("FTF", 0.397 * shaft_hz))
-    # Defaults для NSK 6205 (обновлено по расчётам)
     return BearingSet(4.825 * shaft_hz, 3.175 * shaft_hz, 2.322 * shaft_hz, 0.397 * shaft_hz)
 
-
-# === Семейный скоринг по огибающей (как было) ===
 
 def _family_score_env(f: NDArray[np.float64], A: NDArray[np.float64], fr: float, fam_hz: float) -> float:
     """Скоринг семейства подшипника в спектре огибающей.
@@ -353,14 +311,11 @@ def _family_score_env(f: NDArray[np.float64], A: NDArray[np.float64], fr: float,
 
     Returns:
         Балл в дБ: 20·log10(энергия сигналов/локальный шум).
-
-    Rationale:
-        Суммируем пики на гармониках и боковых ±f_r вокруг семейства; нормируем на локальный шум.
     """
     if fam_hz <= 0 or fr <= 0:
         return 0.0
-    harmonics = [fam_hz * k for k in range(1, 4)]  # до 3-й гармоники
-    sidebands = [h + fr for h in harmonics] + [h - fr for h in harmonics]  # Исправлено: отдельно + и -
+    harmonics = [fam_hz * k for k in range(1, 4)]
+    sidebands = [h + fr for h in harmonics] + [h - fr for h in harmonics]
     peaks = harmonics + sidebands
     total_signal = 0.0
     for p in peaks:
@@ -368,15 +323,12 @@ def _family_score_env(f: NDArray[np.float64], A: NDArray[np.float64], fr: float,
             w = max(1.0, 0.1 * fr)
             m = (f >= p - w) & (f <= p + w)
             total_signal += np.sum(A[m]) if np.any(m) else 0.0
-    # локальный шум вокруг
+
     noise_band_low = max(10.0, fam_hz - 50.0)
     noise_band_high = fam_hz + 50.0
-    m_noise = (f >= noise_band_low) & (f <= noise_band_high) & ~np.isin(f, peaks)  # исключаем пики
+    m_noise = (f >= noise_band_low) & (f <= noise_band_high) & ~np.isin(f, peaks)
     noise = np.mean(A[m_noise]) if np.any(m_noise) else 1e-12
     return 20.0 * math.log10((total_signal + 1e-12) / (noise * len(peaks) + 1e-12))
-
-
-# === Проверка мультифазности для роторной ветки ===
 
 def _has_multiphase_info(r: np.ndarray, s: np.ndarray, t: np.ndarray) -> bool:
     """Проверяет, есть ли минимум две **разные** фазы (для когерентности/ротора).
@@ -386,9 +338,6 @@ def _has_multiphase_info(r: np.ndarray, s: np.ndarray, t: np.ndarray) -> bool:
 
     Returns:
         True, если доступны ≥2 канала с заметными различиями (не дубли одного и того же).
-
-    Rationale:
-        Избегаем ложной когерентности/метрик при дублировании одного канала в несколько входов.
     """
     chans = [np.asarray(c, float) for c in (r, s, t)]
     valid = [c for c in chans if np.std(c) > 1e-9]
@@ -406,20 +355,16 @@ def _has_multiphase_info(r: np.ndarray, s: np.ndarray, t: np.ndarray) -> bool:
     return False
 
 
-# === Факторы для ротора/несоосности в PSD ===
 
 def _snr_mains(f_psd, Pxx, mains):
     """SNR фундаментальной частоты сети.
 
     Args:
-        f_psd, Pxx: массивы частот и PSD.
-        mains: f1 (Гц).
+        f_psd, Pxx: массивы частот и PSD
+        mains: f1 (Гц)
 
     Returns:
-        (SNR_dB, power_fund) — отношение энергии в узком окне вокруг f1 к медиане шума над f1.
-
-    Rationale:
-        Нужен как общий индикатор качества/нагруженности режима и для роторной ветки.
+        (SNR_dB, power_fund) — отношение энергии в узком окне вокруг f1 к медиане шума над f1
     """
     m = (f_psd >= mains - 1.5) & (f_psd <= mains + 1.5)
     p50 = float(np.sum(Pxx[m])) if np.any(m) else 0.0
@@ -432,16 +377,13 @@ def _broken_bar_pair_db(f_psd, Pxx, mains, max_offset, dyn_limit):
     """Оценка симметричной пары пиков около f1 (сломанные стержни ротора).
 
     Args:
-        f_psd, Pxx: частоты и PSD.
-        mains: f1 (Гц).
-        max_offset: статический максимум δ (Гц) из конфига.
-        dyn_limit: динамический максимум δ (Гц), напр. 0.06·f1.
+        f_psd, Pxx: частоты и PSD
+        mains: f1 (Гц)
+        max_offset: статический максимум δ (Гц) из конфига
+        dyn_limit: динамический максимум δ (Гц), напр. 0.06·f1
 
     Returns:
         Псевдо-SNR пары в дБ относительно пика фундамента.
-
-    Rationale:
-        При обрыве стержней появляются боковые около (1±2s)·f1. Мы сканируем δ и берём лучшую пару.
     """
     upper = max(float(max_offset), float(dyn_limit))
     deltas = np.linspace(0.1, upper, 50)
@@ -462,17 +404,14 @@ def _eccentricity_ratio(f_psd, Pxx, mains, fr, m_values, bw):
     """Относительная энергия боковых f1 ± m·f_r (несоосность/эксцентриситет).
 
     Args:
-        f_psd, Pxx: частоты и PSD.
-        mains: f1 (Гц).
-        fr: частота вала (Гц).
-        m_values: набор m (например, (1,2)).
-        bw: ширина окна вокруг каждой боковой (Гц).
+        f_psd, Pxx: частоты и PSD
+        mains: f1 (Гц)
+        fr: частота вала (Гц)
+        m_values: набор m (например, (1,2))
+        bw: ширина окна вокруг каждой боковой (Гц)
 
     Returns:
-        Отношение суммарной энергии боковых к энергии фундамента (безразмерное).
-
-    Rationale:
-        Модель периодической модуляции зазора на частоте оборотов порождает боковые ±m·f_r вокруг f1.
+        Отношение суммарной энергии боковых к энергии фундамента (безразмерное)
     """
 
     def band_power(freq):
@@ -485,22 +424,17 @@ def _eccentricity_ratio(f_psd, Pxx, mains, fr, m_values, bw):
     return num / den
 
 
-# === Публичные признаки (имена прежние) ===
-
 def get_feature_vector(curR: NDArray[np.float64], curS: NDArray[np.float64], curT: NDArray[np.float64],
                        fs: float = DEFAULT_FS, rpm_guess: float = DEFAULT_RPM) -> List[float]:
-    """Формирует вектор признаков f1..f26 (совместим со старой моделью).
+    """Формирует вектор признаков f1..f26 (совместим со старой моделью)
 
     Args:
-        curR, curS, curT: фазные токи (A). Допускается одна/две фазы (пустые массивы для отсутствующих).
-        fs: частота дискретизации (Гц), по умолчанию 25600.
-        rpm_guess: ожидаемая скорость (RPM) для начальной оценки f_r.
+        curR, curS, curT: фазные токи (A). Допускается одна/две фазы (пустые массивы для отсутствующих)
+        fs: частота дискретизации (Гц), по умолчанию 25600
+        rpm_guess: ожидаемая скорость (RPM) для начальной оценки f_r
 
     Returns:
-        Список из 26 признаков [f1..f26] (float).
-
-    Rationale:
-        Сочетает признаки по огибающей для подшипника и PSD-признаки модуляции сети.
+        Список из 26 признаков [f1..f26] (float)
     """
     mains = CONFIG["MAINS_HZ"]
     r = preprocess_per_phase(curR, fs);
@@ -509,10 +443,10 @@ def get_feature_vector(curR: NDArray[np.float64], curS: NDArray[np.float64], cur
     x = (r + s + t) / 3.0
 
     fe, Ae = envelope_spectrum_2_3k(x, fs)
-    f_psd, Pxx = welch(x, fs=fs, nperseg=min(8192, len(x)))  # Увеличено для лучшего разрешения
+    f_psd, Pxx = welch(x, fs=fs, nperseg=min(8192, len(x)))
 
-    # Оценка скольжения
-    pole_pairs = 2  # Предполагаем 4 poles (для 1770 rpm при 60 Hz)
+
+    pole_pairs = 2
     sync_hz = mains / pole_pairs
     slip_guess = 1 - (rpm_guess / 60.0) / sync_hz if sync_hz > 0 else 0.05
     fr = _autoselect_shaft_hz(fe, Ae, rpm_guess * (1 - slip_guess))
@@ -568,9 +502,6 @@ def get_feature_vector(curR: NDArray[np.float64], curS: NDArray[np.float64], cur
             f21, f22, f23, f24, f25,
             f26]
 
-
-# === Severity (как раньше) ===
-
 def severity_from_K(K: float) -> str:
     """Маппинг непрерывного скоринга K в категорию тяжести.
 
@@ -579,9 +510,6 @@ def severity_from_K(K: float) -> str:
 
     Returns:
         'Low'|'Medium'|'High'.
-
-    Rationale:
-        Пороговые значения задаются в конфиге и подбираются по ROC/задаче эксплуатации.
     """
     if K >= CONFIG["SEVERITY"]["high"]: return "High"
     if K >= CONFIG["SEVERITY"]["med"]:  return "Medium"
@@ -589,28 +517,22 @@ def severity_from_K(K: float) -> str:
     return "Low"
 
 
-# === Классификация (имя/выход прежние) ===
-
 def classify_defect_scored(curR: NDArray[np.float64], curS: NDArray[np.float64], curT: NDArray[np.float64],
                            fs: float = DEFAULT_FS, rpm_guess: float = DEFAULT_RPM) -> Tuple[
     str, str, float, Optional[str]]:
-    """Классификатор с баллами: подшипник/ротор/дисбаланс/расцентровка/норма.
+    """Классификатор с баллами: подшипник/ротор/дисбаланс/расцентровка/норма
 
     Args:
-        curR, curS, curT: фазные токи (A) — допускаются пустые фазы.
-        fs: частота дискретизации (Гц).
-        rpm_guess: ожидание по оборотам (RPM).
+        curR, curS, curT: фазные токи (A) — допускаются пустые фазы
+        fs: частота дискретизации (Гц)
+        rpm_guess: ожидание по оборотам (RPM)
 
     Returns:
         (label, severity, score, extra), где:
-          - label: 'Inner Race'|'Outer Race'|'Ball'|'Cage'|'Rotor'|'Imbalance'|'Misalignment'|'Normal'
+          - label: 'Inner Race'|'Outer Race'|'Ball'|'Cage'|'Rotor'|'Misalignment'|'Normal'
           - severity: 'Low'|'Medium'|'High'
-          - score: численный K (дБ),
-          - extra: строка кода частоты семейства (например, '263.5Hz') или None.
-
-    Rationale:
-        Сначала проверяем подшипник по комбинированному скорингу ENV+MCSA и стабильности огибающей (PSNR).
-        Если неубедительно — ветка ротора/дисбаланса/расцентровки по SNR@f1, симметричной паре около f1 и боковым f1±m·f_r.
+          - score: численный K (дБ)
+          - extra: строка кода частоты семейства (например, '263.5Hz') или None
     """
     mains = CONFIG["MAINS_HZ"]
     r = preprocess_per_phase(curR, fs);
@@ -621,8 +543,7 @@ def classify_defect_scored(curR: NDArray[np.float64], curS: NDArray[np.float64],
     fe, Ae = envelope_spectrum_2_3k(x, fs)
     f_psd, Pxx = welch(x, fs=fs, nperseg=min(8192, len(x)))
 
-    # Оценка скольжения
-    pole_pairs = 2  # 4 poles
+    pole_pairs = 2
     sync_hz = mains / pole_pairs
     slip_guess = 1 - (rpm_guess / 60.0) / sync_hz if sync_hz > 0 else 0.05
     fr = _autoselect_shaft_hz(fe, Ae, rpm_guess * (1 - slip_guess))
@@ -683,12 +604,10 @@ def classify_defect_scored(curR: NDArray[np.float64], curS: NDArray[np.float64],
                 return "Rotor", severity_from_K(max(snr_m / 2.0, bb_db / 2.0)), max(snr_m, bb_db), None
             elif ecc_rel >= CONFIG["ECC_MIN_REL"] and a100_a50 >= CONFIG["A100_A50_MIN"]:
                 return "Misalignment", severity_from_K(snr_m / 2.0), snr_m, None
-            elif ecc_rel >= CONFIG["ECC_MIN_REL"]:
-                return "Imbalance", severity_from_K(snr_m / 2.0), snr_m, None
             else:
                 return "Rotor", severity_from_K(snr_m / 2.0), snr_m, None
 
-    return "Normal", "Low", max(0.0, K_top), None
+    return "Normal", "None", max(0.0, K_top), None
 
 
 def classify_defect(curR: NDArray[np.float64], curS: NDArray[np.float64], curT: NDArray[np.float64],
@@ -696,12 +615,9 @@ def classify_defect(curR: NDArray[np.float64], curS: NDArray[np.float64], curT: 
     """Обёртка над classify_defect_scored с тем же API, возвращает только метку.
 
     Args:
-        curR, curS, curT: фазные токи (A).
-        fs: частота дискретизации (Гц).
-        rpm_guess: обороты (RPM).
-
-    Returns:
-        Строка-метка дефекта.
+        curR, curS, curT: фазные токи (A)
+        fs: частота дискретизации (Гц)
+        rpm_guess: обороты (RPM)
     """
     defect, _, _, _ = classify_defect_scored(curR, curS, curT, fs, rpm_guess)
     return defect
