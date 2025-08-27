@@ -5,16 +5,12 @@ import os
 
 def csv_sort(data_dir: str):
     csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
-    # Handle both formats: current_X.csv and current_X_processed.csv
     def sort_key(filename):
         try:
-            # Try to extract number from current_X_processed.csv format
             if 'processed' in filename:
                 return int(filename.split('_')[1])
-            # Try to extract number from current_X.csv format
             return int(filename.split('_')[1].split('.')[0])
         except (IndexError, ValueError):
-            # If extraction fails, sort by filename
             return filename
     
     csv_files.sort(key=sort_key)
@@ -45,10 +41,8 @@ def process_and_save_all_files(data_dir: str):
         processed_files = []
         failed_files = []
         
-        # Получаем список CSV файлов и сортируем их по числовому значению
         csv_files = csv_sort(data_dir)
         
-        # Создаем отдельную директорию для обработанных файлов
         processed_dir = os.path.join(os.path.dirname(data_dir), 'data_processed')
         os.makedirs(processed_dir, exist_ok=True)
         
@@ -78,9 +72,7 @@ def process_and_save_all_files(data_dir: str):
 def features_for_one_file(input_file: str, output_file: str) -> bool:
     print(f"Обработка файла: {input_file}")
     try:
-        # Extract features directly from the input file path
         df_features = extract_features_from_file(input_file)
-        # Save the resulting features to the output file
         df_features.to_csv(output_file, index=False)
         print(f"[OK] Обработанный файл сохранен: {output_file}")
         return True
@@ -96,9 +88,7 @@ def features_for_one_file(input_file: str, output_file: str) -> bool:
 def features_for_one_file_for_all(input_file: str, output_file: str) -> bool:
     print(f"Обработка файла: {input_file}")
     try:
-        # Extract features directly from the input file path
         df_features = extract_features_from_file_for_learning(input_file)
-        # Save the resulting features to the output file
         df_features.to_csv(output_file, index=False)
         print(f"[OK] Обработанный файл сохранен: {output_file}")
         return True
@@ -118,16 +108,14 @@ def features_for_all_files(data_dir: str):
         features_files = []
         failed_files = []
         
-        # Получаем список CSV файлов и сортируем их по числовому значению
         csv_files = csv_sort(data_dir)
         
-        # Создаем отдельную директорию для обработанных файлов
         features_dir = os.path.join(os.path.dirname(data_dir), 'data_feature')
         os.makedirs(features_dir, exist_ok=True)
         
         for csv_file in csv_files:
             input_path = os.path.join(data_dir, csv_file)
-            # Generate output filename by replacing '_processed' with '_features' if it exists
+
             if '_processed' in csv_file:
                 output_filename = csv_file.replace('_processed', '_features')
             else:

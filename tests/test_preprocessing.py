@@ -21,35 +21,27 @@ class TestPreprocessing(unittest.TestCase):
         self.df_with_nans.loc[70:75, 'current_T'] = np.nan
 
     def test_handle_missing_values_interpolate(self):
-        """Проверка заполнения пропусков интерполяцией."""
         df_processed = preprocess_data(self.df_with_nans, fill_method='interpolate',
                                        normalize=False, filter_signals=False)
 
-        # Проверка, что после обработки пропусков нет
-        self.assertFalse(df_processed.isnull().values.any(), "После интерполяции остались пропуски!")
+        self.assertFalse(df_processed.isnull().values.any(), "После интерполяции остались пропуски")
 
     def test_handle_missing_values_drop(self):
-        """Проверка удаления строк с пропусками."""
         df_processed = preprocess_data(self.df_with_nans, fill_method='drop',
                                        normalize=False, filter_signals=False)
 
-        # Ожидается удаление строк с пропусками (ожидаем меньше строк, чем исходно)
         self.assertLess(len(df_processed), len(self.df_with_nans),
                         "Строки с пропусками не были удалены!")
 
-        # Проверка отсутствия пропусков
         self.assertFalse(df_processed.isnull().values.any(), "Остались пропуски после удаления строк!")
 
     def test_normalization(self):
-        """Проверка нормализации данных."""
         df_processed = preprocess_data(self.df_raw, fill_method='interpolate',
                                        normalize=True, filter_signals=False)
 
-        # Среднее значение должно быть близко к 0, стандартное отклонение близко к 1
         mean = df_processed.mean().round(decimals=2)
         std = df_processed.std().round(decimals=2)
 
-        # Проверка значений среднего и стандартного отклонения
         for column in df_processed.columns:
             self.assertAlmostEqual(mean[column], 0, places=1,
                                    msg=f"Среднее по колонке {column} не близко к 0 после нормализации!")
@@ -62,7 +54,6 @@ class TestPreprocessing(unittest.TestCase):
                                        normalize=False, filter_signals=True,
                                        filter_band=(50, 1000), sampling_rate=25600.0)
 
-        # Проверка, что после фильтрации остались числовые значения и нет пропусков
         self.assertFalse(df_processed.isnull().values.any(), "После фильтрации возникли пропуски!")
         for column in df_processed.columns:
             self.assertTrue(pd.api.types.is_numeric_dtype(df_processed[column]),
@@ -74,16 +65,13 @@ class TestPreprocessing(unittest.TestCase):
                                        normalize=True, filter_signals=True,
                                        filter_band=(50, 1000), sampling_rate=25600.0)
 
-        # Проверка отсутствия пропусков
         self.assertFalse(df_processed.isnull().values.any(), "Пропуски после полного препроцессинга!")
 
-        # Проверка среднего значения (близко к нулю)
         mean = df_processed.mean()
         for column in df_processed.columns:
             self.assertAlmostEqual(mean[column], 0, delta=0.1,
                                    msg=f"Среднее по колонке {column} не близко к 0 после полного препроцессинга!")
 
-        # Проверка, что стандартное отклонение не равно нулю и имеет разумное значение (> 0.1)
         std = df_processed.std()
         for column in df_processed.columns:
             self.assertGreater(std[column], 0.1,

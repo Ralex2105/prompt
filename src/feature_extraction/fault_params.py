@@ -1,52 +1,49 @@
-# fault_params.py
-# -*- coding: utf-8 -*-
-"""
-fault_params.py — обновлено (без смены ключей CONFIG).
-"""
-
 from __future__ import annotations
 import json, os
 from typing import Dict, Tuple
 
-# ===== БАЗА =====
-MAINS_HZ: float = 50.0  # Изменено на 60 Hz, так как 1770 rpm типично для 60 Hz
-HPF_HZ: float   = 1.0
+
+MAINS_HZ: float = 60.0
+HPF_HZ: float   = 4.0
 
 ENV_BAND_DEFAULT: Tuple[float, float] = (2000.0, 3000.0)
 ENV_BAND_SCAN:    Tuple[float, float] = (800.0, 7000.0)
 ENV_BAND_WIDTH:   float = 600.0
 USE_ADAPTIVE_ENVELOPE: bool = True
 
-# ===== ПОДШИПНИК =====
-FAMILY_T: float = 1.5  # Снижено для большей чувствительности
-GAP_MIN:  float = 0.20
-PSNR_T:   float = 3.0  # Снижено
+
+FAMILY_T: float = 3.5
+GAP_MIN:  float = 0.50
+PSNR_T:   float = 5.0
 
 WEIGHT_ENV:  float = 0.50
 WEIGHT_MCSA: float = 0.50
 MCSA_SB_BW:  float = 1.0
 MCSA_M_MULTIPLIERS = (1, 2)
 
-FAMILY_WEIGHTS = {"Inner Race": 0.5, "Outer Race": 1.0, "Ball": 0.8, "Cage": 0.8}  # Увеличено для Ball/Cage
+FAMILY_WEIGHTS = {
+    "Inner Race": 3.0,
+    "Outer Race": 3.0,
+    "Ball": 3.0,
+    "Cage": 0.5
+}
 
-# ===== РОТОР / НЕСОСНОСТЬ =====
-ROTOR_SNR_T:   float = 3.0  # Снижено
-COH_MSC_MIN:   float = 0.28
-A100_A50_MIN:  float = 0.15  # Снижено
+
+ROTOR_SNR_T:   float = 12.0
+COH_MSC_MIN:   float = 0.15
+A100_A50_MIN:  float = 0.6
 
 ROTOR_BB_MAX_OFFSET: float = 3.5
-ROTOR_BB_MIN_PAIR_DB: float = 6.0  # Снижено
+ROTOR_BB_MIN_PAIR_DB: float = 6.0
 
 ECC_M = (1, 2)
 ECC_BW: float = 1.0
-ECC_MIN_REL: float = 0.01  # Снижено
+ECC_MIN_REL: float = 0.001
 
 ALLOW_SINGLE_PHASE_ROTOR: bool = True
 
-# ===== SEVERITY =====
-SEVERITY = {"low": 2.0, "med": 4.0, "high": 7.0}
+SEVERITY = {"low": 5.0, "med": 7.0, "high": 9.0}
 
-# -------- utils --------
 def _pair(v):
     try:
         return (float(v[0]), float(v[1]))
@@ -89,7 +86,6 @@ def _apply_overrides(d: Dict):
             try: gl[k] = type(gl[k])(d[k])
             except Exception: pass
 
-    # безопасно приводим булевы:
     for k in ("USE_ADAPTIVE_ENVELOPE","ALLOW_SINGLE_PHASE_ROTOR"):
         if k in d:
             gl[k] = _to_bool(d[k])

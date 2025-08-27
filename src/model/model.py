@@ -27,8 +27,7 @@ print(f"X_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}")
 print(f"y_defect_train: {y_defect_train.shape}, y_defect_val: {y_defect_val.shape}, y_defect_test: {y_defect_test.shape}")
 print(f"y_severity_train: {y_severity_train.shape}, y_severity_val: {y_severity_val.shape}, y_severity_test: {y_severity_test.shape}")
 
-    
-# Обучение модели для defect type (multiclass classification)
+
 model_defect = CatBoostClassifier(
         iterations=199,  
         depth=6,
@@ -38,13 +37,11 @@ model_defect = CatBoostClassifier(
         verbose=True
     )
 
-# Обучение с сохранением истории
 history_defect = model_defect.fit(
     X_train, y_defect_train, 
     eval_set=(X_val, y_defect_val),
 )
 
-# Обучение модели для severity 
 model_severity = CatBoostClassifier(
         iterations=182,
         depth=6,
@@ -58,7 +55,6 @@ history_severity = model_severity.fit(
     eval_set=(X_val, y_severity_val),
     )
 
-# Предсказания и оценка
 y_defect_pred = model_defect.predict(X_test)
 y_severity_pred = model_severity.predict(X_test)
     
@@ -68,7 +64,5 @@ severity_acc = accuracy_score(y_severity_test, y_severity_pred)
 print(f"Defect accuracy: {defect_acc}")
 print(f"Severity accuracy: {severity_acc}")    
 
-
-# Save models in the model directory
 model_defect.save_model(os.path.join(MODEL_DIR, 'model_defect.cbm'))
 model_severity.save_model(os.path.join(MODEL_DIR, 'model_severity.cbm'))

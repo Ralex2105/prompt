@@ -6,13 +6,11 @@ import shutil
 import pandas as pd
 import logging
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Directory paths (relative to prompt/src)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data")
 SUMMARY_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_summary")
@@ -20,8 +18,6 @@ PROCESSED_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_processed")
 FEATURE_DATA_DIR = os.path.join(BASE_DIR, "..", "data", "data_feature")
 DATA_ML_DIR = os.path.join(BASE_DIR, "..", "data", "data_ml")
 
-
-# Create directories if not exist
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(SUMMARY_DATA_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
@@ -60,7 +56,6 @@ async def get_summary():
             logger.error(f"Summary directory does not exist: {SUMMARY_DATA_DIR}")
             return JSONResponse(status_code=404, content={"message": "Summary directory not found"})
 
-        # Берём только summary_data_*.csv и сортируем по номеру (новые выше)
         def _num(name: str) -> int:
             try:
                 return int(name.replace("summary_data_", "").replace(".csv", ""))
@@ -76,7 +71,6 @@ async def get_summary():
         def safe_get(df, col, default="N/A"):
             if col in df.columns and not df.empty:
                 val = df[col].iloc[0]
-                # JSONResponse не любит NaN — приводим к строке/дефолту
                 if pd.notna(val):
                     return str(val)
             return default
@@ -127,7 +121,6 @@ async def get_uploaded_files():
 @app.delete("/delete_file/{filename}")
 async def delete_file(filename: str):
     try:
-        # Extract file number from summary filename (e.g. summary_data_1.csv -> 1)
         file_number = filename.split('_')[-1].replace('.csv', '')
         directories = [
             (DATA_DIR,        f"current_{file_number}.csv"),
@@ -152,5 +145,4 @@ async def delete_file(filename: str):
         logger.error(f"Error deleting file {filename}: {str(e)}")
         return JSONResponse(status_code=500, content={"message": str(e)})
 
-# Mount static files from prompt/public
 app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "..", "public"), html=True), name="public")

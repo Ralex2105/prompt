@@ -15,8 +15,8 @@
   --border: rgba(255, 255, 255, 0.1);
   --success: #062c08;
   --warning: #FFC107;
-  --table-bg: #0A1F6B; /* Darker shade for table background, close to #0E2B8F but darker */
-  --graph-bg: #0E2B8F; /* Background for graphs */
+  --table-bg: #0A1F6B;
+  --graph-bg: #0E2B8F;
 }
 
 * {
@@ -55,11 +55,12 @@ body {
   line-height: 1.4;
 }
 
+.header-right { display: flex; align-items: center; gap: 12px; }
+
 .status {
-  padding: 8px 14px;
+  padding: 8px 8px;
   border-radius: 8px;
   font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .status-idle { color: var(--text-muted); }
@@ -94,7 +95,7 @@ body {
   gap: 15px;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 20px; /* Added margin to separate from upload-controls */
+  margin-bottom: 20px;
 }
 
 .upload-controls {
@@ -274,11 +275,11 @@ body {
   width: 100%;
   max-width: 1400px;
   margin-top: 20px;
-  background: var(--graph-bg); /* Set graph container background */
+  background: var(--graph-bg); 
 }
 
 .table-wrap {
-  max-height: 600px; /* Increased from 400px to make the table bigger */
+  max-height: 600px; 
   overflow-y: auto;
   margin-top: 16px;
   border: 1px solid var(--border);
@@ -288,16 +289,16 @@ body {
 #statsTable, #summaryTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 16px; /* Increased from 14px to make text larger */
+  font-size: 16px;
   color: var(--text);
-  background: var(--table-bg); /* Darker table background */
+  background: var(--table-bg);
 }
 
 #statsTable th,
 #statsTable td,
 #summaryTable th,
 #summaryTable td {
-  padding: 16px 20px; /* Increased padding for larger cells */
+  padding: 16px 20px; 
   text-align: left;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -307,7 +308,7 @@ body {
 #summaryTable th {
   position: sticky;
   top: 0;
-  background: var(--table-bg); /* Darker header background */
+  background: var(--table-bg);
   font-weight: 600;
   z-index: 10;
 }

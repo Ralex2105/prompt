@@ -4,24 +4,11 @@ from datetime import datetime
 
 
 def process_defects_file(input_path, output_path):
-    """
-    Process a CSV file with defect data, adding data_summary columns and analysis time.
 
-    Args:
-        input_path (str): Path to the input CSV file.
-        output_path (str): Path to save the processed CSV file.
-
-    Returns:
-        dict: Summary information including summary_defect, summary_severity,
-              additional_note, and analysis_time.
-    """
-    # Load the CSV file
     df = pd.read_csv(input_path)
 
-    # Get current system time
     analysis_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    # Percentage of Normal
     total_rows = len(df)
     normal_count = len(df[df['defect'] == 'Normal'])
     normal_percentage = (normal_count / total_rows) * 100 if total_rows > 0 else 0
@@ -29,14 +16,12 @@ def process_defects_file(input_path, output_path):
     if normal_percentage > 90:
         summary_defect = 'Normal'
         summary_severity = '-'
-        # Check if other defects exist
         unique_defects = df['defect'].unique()
         if len(unique_defects) > 1:
             additional_note = 'Предположительно есть другие дефекты, необходима экспертная оценка'
         else:
             additional_note = '-'
     else:
-        # Filter non-Normal
         non_normal_df = df[df['defect'] != 'Normal']
         if not non_normal_df.empty:
             non_normal_df['defect_severity'] = (
@@ -54,14 +39,12 @@ def process_defects_file(input_path, output_path):
             summary_defect = 'Unknown'
             summary_severity = 'Unknown'
 
-        # For additional note
         unique_defects = non_normal_df['defect'].unique()
         if len(unique_defects) > 1:
             additional_note = 'Предположительно есть другие дефекты, необходима экспертная оценка'
         else:
             additional_note = '-'
 
-    # Translate defect and severity to Russian
     defect_map = {
         'Outer Race': 'Дефект внешнего кольца',
         'Inner Race': 'Дефект внутреннего кольца',
@@ -83,14 +66,12 @@ def process_defects_file(input_path, output_path):
 
     summary_defect_ru = defect_map.get(summary_defect, summary_defect)
     summary_severity_ru = severity_map.get(summary_severity, summary_severity)
-
-    # Add the data_summary columns to the DataFrame
+    
     df['summary_defect'] = summary_defect_ru
     df['summary_severity'] = summary_severity_ru
     df['additional_note'] = additional_note
     df['analysis_time'] = analysis_time
 
-    # Save the updated CSV
     df.to_csv(output_path, index=False)
 
     return {

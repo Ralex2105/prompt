@@ -5,10 +5,8 @@ from scipy.fft import fft, fftfreq
 
 def normalize(df: pd.DataFrame, dc: bool = True) -> pd.DataFrame:
     if dc:
-    # Удаляем DC-компоненту
         return df - df.mean()
     else:
-    # Z-score
         return (df - df.mean()) / df.std()
         
     
@@ -26,7 +24,6 @@ def fft_transform(sig, fs):
 
 
 def envelope_spectrum(sig, fs, band=(2000,3000)):
-    # band: high-frequency band for envelope
     hf = bandpass_filter(sig, band[0], band[1], fs)
     env = np.abs(hilbert(hf))
     return fft_transform(env, fs)
@@ -49,9 +46,7 @@ def dq_transform(df: pd.DataFrame) -> pd.DataFrame:
 
 def preprocess_data(df: pd.DataFrame, dc: bool = True, combined: bool = False, dq: bool = False) -> pd.DataFrame:
 
-    # Преобразуем всё к числовому типу; ошибки — в NaN
     df = df.apply(pd.to_numeric, errors='coerce')
-    # Удаляем полностью пустые строки
     df = df.dropna(how='all')
     df = normalize(df, dc)
 
