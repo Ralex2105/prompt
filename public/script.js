@@ -184,6 +184,10 @@ async function showCharts(filename, row) {
     // Check if the graph for this row is already open
     if (currentGraphRow && currentGraphRow.dataset.filename === filename) {
       // Close the current graph
+      const tableWrap = document.querySelector('.table-wrap');
+      if (tableWrap) {
+        tableWrap.style.maxHeight = '600px'; // Restore original max-height
+      }
       currentGraphRow.remove();
       currentGraphRow = null;
       return;
@@ -191,6 +195,10 @@ async function showCharts(filename, row) {
 
     // Close any other open graph
     if (currentGraphRow) {
+      const tableWrap = document.querySelector('.table-wrap');
+      if (tableWrap) {
+        tableWrap.style.maxHeight = '600px'; // Restore original max-height
+      }
       currentGraphRow.remove();
       currentGraphRow = null;
     }
@@ -223,21 +231,22 @@ async function showCharts(filename, row) {
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.gap = '20px';
+    container.style.width = '100%'; // Ensure full width
 
     const chart1 = document.createElement('div');
     chart1.id = `chart1_${filename}`;
     chart1.style.width = '100%';
-    chart1.style.height = '450px';
+    chart1.style.height = '600px'; // Increased height for better visibility
 
     const chart2 = document.createElement('div');
     chart2.id = `chart2_${filename}`;
     chart2.style.width = '100%';
-    chart2.style.height = '450px';
+    chart2.style.height = '600px'; // Increased height
 
     const chart3 = document.createElement('div');
     chart3.id = `chart3_${filename}`;
     chart3.style.width = '100%';
-    chart3.style.height = '450px';
+    chart3.style.height = '600px'; // Increased height
 
     container.appendChild(chart1);
     container.appendChild(chart2);
@@ -248,14 +257,44 @@ async function showCharts(filename, row) {
     // Insert the graph row after the current row (to appear below)
     row.parentNode.insertBefore(graphTr, row.nextSibling);
 
+    // Expand the table-wrap to show all graphs without scrolling
+    const tableWrap = document.querySelector('.table-wrap');
+    if (tableWrap) {
+      tableWrap.style.maxHeight = 'none'; // Remove max-height to expand fully
+    }
+
     // Prepare time index
     const indices = data.map((_, i) => i);
 
     // Determine the primary defect (assuming consistent across data)
     const primaryDefect = data[0].defect || 'Unknown';
 
+    // Common dark mode layout settings for Plotly
+    const darkLayout = {
+      paper_bgcolor: '#0E2B8F',
+      plot_bgcolor: '#0E2B8F',
+      font: { color: '#fff' },
+      xaxis: {
+        gridcolor: 'rgba(255,255,255,0.1)',
+        linecolor: '#fff',
+        zerolinecolor: '#fff',
+        title: { font: { color: '#fff' } }
+      },
+      yaxis: {
+        gridcolor: 'rgba(255,255,255,0.1)',
+        linecolor: '#fff',
+        zerolinecolor: '#fff',
+        title: { font: { color: '#fff' } }
+      },
+      legend: { bgcolor: '#0E2B8F', bordercolor: '#fff', font: { color: '#fff' } },
+      title: { font: { color: '#fff' } },
+      autosize: true
+    };
+
     // Chart 1: Severity Metric (K_value) over Time with threshold lines
-    const kValues = data.map(row => parseFloat(row['K_value']));
+    // Mapping for 'severity' to numbers (placeholder: Low=2, High=5, Unknown=0)
+    const severityMap = { 'Low': 2, 'High': 5, 'Unknown': 0 };
+    const kValues = data.map(row => severityMap[row['severity']] || 0);
     const traceK = {
       x: indices,
       y: kValues,
@@ -271,45 +310,66 @@ async function showCharts(filename, row) {
     const highThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 6.0, y1: 6.0, line: { color: '#FF4F12', dash: 'dash', width: 1 }, name: 'High Threshold' };
 
     Plotly.newPlot(chart1.id, [traceK], {
-      title: 'Метрика Тяжести (K_value) во Времени',
-      xaxis: { title: 'Индекс Временного Окна' },
-      yaxis: { title: 'Значение K' },
-      shapes: [lowThreshold, medThreshold, highThreshold],
-      margin: { t: 50 }
+  ...darkLayout,
+  title: { text: 'Метрика Тяжести (K_value) во Времени', font: { color: '#fff' } },
+  xaxis: { ...(darkLayout.xaxis || {}), title: { text: 'Индекс Временного Окна', font: { color: '#fff' } }, type: 'linear', autorange: true, automargin: true },
+  yaxis: { ...(darkLayout.yaxis || {}), title: { text: 'Значение K', font: { color: '#fff' } }, autorange: true, automargin: true },
+  shapes: [lowThreshold, medThreshold, highThreshold],
+  margin: { t: 70 },
+}, {
+      responsive: true,
+      scrollZoom: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ['toImage', 'sendDataToCloud']
     });
 
-    // Chart 2: Bearing Defect Scores over Time (f1: Inner Race, f2: Outer Race, f3: Ball, f4: Cage)
-    // Relevant for bearing defects; highlight if primary defect is bearing-related
-    const traceF1 = { x: indices, y: data.map(row => parseFloat(row['f1'])), mode: 'lines', name: 'Inner Race Score (f1)', line: { color: primaryDefect === 'Inner Race' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Inner Race' ? 3 : 1 } };
-    const traceF2 = { x: indices, y: data.map(row => parseFloat(row['f2'])), mode: 'lines', name: 'Outer Race Score (f2)', line: { color: primaryDefect === 'Outer Race' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Outer Race' ? 3 : 1 } };
-    const traceF3 = { x: indices, y: data.map(row => parseFloat(row['f3'])), mode: 'lines', name: 'Ball Score (f3)', line: { color: primaryDefect === 'Ball' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Ball' ? 3 : 1 } };
-    const traceF4 = { x: indices, y: data.map(row => parseFloat(row['f4'])), mode: 'lines', name: 'Cage Score (f4)', line: { color: primaryDefect === 'Cage' ? '#FF4F12' : '#ffffff', width: primaryDefect === 'Cage' ? 3 : 1 } };
+    // Chart 2: Bearing Defect Scores over Time
+    const traceF1 = { x: indices, y: data.map(row => parseFloat(row['f1'])), mode: 'lines', name: 'Inner Race Score (f1)', line: { color: primaryDefect === 'Inner Race' ? '#FF4F12' : '#1f77b4', width: primaryDefect === 'Inner Race' ? 3 : 1 } };
+    const traceF2 = { x: indices, y: data.map(row => parseFloat(row['f2'])), mode: 'lines', name: 'Outer Race Score (f2)', line: { color: primaryDefect === 'Outer Race' ? '#FF4F12' : '#2ca02c', width: primaryDefect === 'Outer Race' ? 3 : 1 } };
+    const traceF3 = { x: indices, y: data.map(row => parseFloat(row['f3'])), mode: 'lines', name: 'Ball Score (f3)', line: { color: primaryDefect === 'Ball' ? '#FF4F12' : '#d62728', width: primaryDefect === 'Ball' ? 3 : 1 } };
+    const traceF4 = { x: indices, y: data.map(row => parseFloat(row['f4'])), mode: 'lines', name: 'Cage Score (f4)', line: { color: primaryDefect === 'Cage' ? '#FF4F12' : '#9467bd', width: primaryDefect === 'Cage' ? 3 : 1 } };
 
-    // Family threshold line (FAMILY_T = 0.0, but for visibility, show at a reasonable detection level if needed)
     const familyThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 0.0, y1: 0.0, line: { color: '#f1c40f', dash: 'dash', width: 1 }, name: 'Detection Threshold' };
 
     Plotly.newPlot(chart2.id, [traceF1, traceF2, traceF3, traceF4], {
-      title: 'Оценки Дефектов Подшипника во Времени',
-      xaxis: { title: 'Индекс Временного Окна' },
-      yaxis: { title: 'Оценка Дефекта' },
-      shapes: [familyThreshold],
-      margin: { t: 50 }
+  ...darkLayout,
+  title: { text: 'Оценки Дефектов Подшипника во Времени', font: { color: '#fff' } },
+  xaxis: { ...(darkLayout.xaxis || {}), title: { text: 'Индекс Временного Окна', font: { color: '#fff' } }, type: 'linear', autorange: true, automargin: true },
+  yaxis: { ...(darkLayout.yaxis || {}), title: { text: 'Оценка Дефекта', font: { color: '#fff' } }, autorange: true, automargin: true },
+  shapes: [familyThreshold],
+  margin: { t: 70 },
+}, {
+      responsive: true,
+      scrollZoom: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ['toImage', 'sendDataToCloud']
     });
 
-    // Chart 3: Rotor/Misalignment/Imbalance Related Features (f5: MCSA Shaft Sidebands, f26: Envelope Slope)
-    // Highlight f5 for Rotor/Imbalance/Misalignment
-    const traceF5 = { x: indices, y: data.map(row => parseFloat(row['f5'])), mode: 'lines', name: 'MCSA Shaft Sidebands (f5)', line: { color: ['Rotor', 'Imbalance', 'Misalignment'].includes(primaryDefect) ? '#FF4F12' : '#ffffff', width: ['Rotor', 'Imbalance', 'Misalignment'].includes(primaryDefect) ? 3 : 1 } };
+    // Chart 3: Rotor/Misalignment/Imbalance Related Features
+    const traceF5 = { x: indices, y: data.map(row => parseFloat(row['f5'])), mode: 'lines', name: 'MCSA Shaft Sidebands (f5)', line: { color: ['Rotor', 'Imbalance', 'Misalignment'].includes(primaryDefect) ? '#FF4F12' : '#7f7f7f', width: ['Rotor', 'Imbalance', 'Misalignment'].includes(primaryDefect) ? 3 : 1 } };
     const traceF26 = { x: indices, y: data.map(row => parseFloat(row['f26'])), mode: 'lines', name: 'Envelope Spectrum Slope (f26)', line: { color: '#2ecc71' } };
 
-    // Additional highlight lines (e.g., for rotor SNR threshold ~5.0 from ROTOR_SNR_T)
     const rotorSNRThreshold = { type: 'line', x0: 0, x1: Math.max(...indices), y0: 5.0, y1: 5.0, line: { color: '#f1c40f', dash: 'dash', width: 1 }, name: 'Rotor SNR Threshold' };
 
     Plotly.newPlot(chart3.id, [traceF5, traceF26], {
-      title: 'Признаки, Связанные с Ротором/Расцентровкой/Дисбалансом',
-      xaxis: { title: 'Индекс Временного Окна' },
-      yaxis: { title: 'Значение Признака' },
-      shapes: [rotorSNRThreshold],
-      margin: { t: 50 }
+  ...darkLayout,
+  title: { text: 'Признаки, Связанные с Ротором/Расцентровкой/Дисбалансом', font: { color: '#fff' } },
+  xaxis: { ...(darkLayout.xaxis || {}), title: { text: 'Индекс Временного Окна', font: { color: '#fff' } }, type: 'linear', autorange: true, automargin: true },
+  yaxis: { ...(darkLayout.yaxis || {}), title: { text: 'Значение Признака', font: { color: '#fff' } }, autorange: true, automargin: true },
+  shapes: [rotorSNRThreshold],
+  margin: { t: 70 },
+}, {
+      responsive: true,
+      scrollZoom: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ['toImage', 'sendDataToCloud']
+    });
+
+    // Update layout on window resize for responsiveness
+    window.addEventListener('resize', () => {
+      Plotly.Plots.resize(chart1.id);
+      Plotly.Plots.resize(chart2.id);
+      Plotly.Plots.resize(chart3.id);
     });
 
     currentGraphRow = graphTr;

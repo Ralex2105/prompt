@@ -1,22 +1,21 @@
 import numpy as np
-import data_transform as dt
+from . import data_transform as dt
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, mean_absolute_error
-from catboost import CatBoostClassifier, CatBoostRegressor
+from sklearn.metrics import accuracy_score 
+from catboost import CatBoostClassifier
+import os
 
-FEATURE_DATA_DIR = "data/data_feature"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FEATURE_DATA_DIR = os.path.join(PROJECT_ROOT, 'data', 'data_feature')
+MODEL_DIR = os.path.join(PROJECT_ROOT, 'model')
 
 df = dt.data_concat(FEATURE_DATA_DIR)
 X, y_defect, y_severity = dt.get_X_y_defect_y_severity(df)
 
-# df.to_csv(r'C:\Users\Andrey\Desktop\df.csv', index=False)
-# pd.DataFrame(X).to_csv(r'C:\Users\Andrey\Desktop\X.csv', index=False)
-# pd.DataFrame(y).to_csv(r'C:\Users\Andrey\Desktop\y.csv', index=False)
-
 
 X_train, X_test, y_defect_train, y_defect_test, y_severity_train, y_severity_test = train_test_split(
-    X, y_defect, y_severity, 
-    test_size=0.2, 
+    X, y_defect, y_severity,
+    test_size=0.2,
     random_state=42, 
 )
 X_train, X_val, y_defect_train, y_defect_val, y_severity_train, y_severity_val = train_test_split(
@@ -45,7 +44,6 @@ history_defect = model_defect.fit(
     eval_set=(X_val, y_defect_val),
 )
 
-
 # Обучение модели для severity 
 model_severity = CatBoostClassifier(
         iterations=182,
@@ -70,5 +68,7 @@ severity_acc = accuracy_score(y_severity_test, y_severity_pred)
 print(f"Defect accuracy: {defect_acc}")
 print(f"Severity accuracy: {severity_acc}")    
 
-model_defect.save_model('data\model\model_defect.cbm')
-model_severity.save_model('data\model\model_severity.cbm')
+
+# Save models in the model directory
+model_defect.save_model(os.path.join(MODEL_DIR, 'model_defect.cbm'))
+model_severity.save_model(os.path.join(MODEL_DIR, 'model_severity.cbm'))
